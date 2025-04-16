@@ -6,6 +6,7 @@ import { useLocale } from '../../../common/i18n';
 import { highPriorityLabels } from '../../../common/priority-labels';
 import { classes } from '../../../utils/classes';
 
+import { Share } from '../Icons/Share';
 import { Star } from '../Icons/Star';
 
 import { Definitions } from './Definitions';
@@ -31,6 +32,22 @@ export type WordEntryProps = {
   selectState: SelectState;
   onPointerUp?: (evt: PointerEvent) => void;
   onClick?: (evt: MouseEvent) => void;
+};
+
+// Handle share button click
+const handleShare = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Use Web Share API if available (e.g. on Android)
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {
+      // Fallback to clipboard if sharing fails
+      navigator.clipboard.writeText(text);
+    });
+  } else {
+    // Fallback to clipboard on desktop
+    navigator.clipboard.writeText(text);
+  }
 };
 
 export function WordEntry(props: WordEntryProps) {
@@ -136,82 +153,110 @@ export function WordEntry(props: WordEntryProps) {
         )}
 
         {matchingKanji.length > 0 && (
-          <span class="w-kanji" lang="ja">
-            {matchingKanji.map((kanji, index) => {
-              const ki = new Set(kanji.i || []);
+          <div class="tp:flex tp:items-center">
+            <span class="w-kanji" lang="ja">
+              {matchingKanji.map((kanji, index) => {
+                const ki = new Set(kanji.i || []);
 
-              const dimmed =
-                // Always dim search-only kanji
-                ki.has('sK') ||
-                // Dim the non-matching kanji unless there are none because we
-                // matched only on search-only kanji headwords.
-                (!kanji.match && !matchedOnlyOnSearchOnlyKanji) ||
-                // If we matched on the reading, dim any kanji headwords that are
-                // irregular, old, or rare.
-                (matchedOnKana &&
-                  (ki.has('iK') || ki.has('oK') || ki.has('rK')));
+                const dimmed =
+                  // Always dim search-only kanji
+                  ki.has('sK') ||
+                  // Dim the non-matching kanji unless there are none because we
+                  // matched only on search-only kanji headwords.
+                  (!kanji.match && !matchedOnlyOnSearchOnlyKanji) ||
+                  // If we matched on the reading, dim any kanji headwords that are
+                  // irregular, old, or rare.
+                  (matchedOnKana &&
+                    (ki.has('iK') || ki.has('oK') || ki.has('rK')));
 
-              return (
-                <Fragment key={kanji.ent}>
-                  {index > 0 && <span class="separator">、</span>}
-                  <span class={classes(dimmed && 'dimmed')}>
-                    {kanji.ent}
-                    {!!kanji.i?.length && <HeadwordInfo info={kanji.i} />}
-                    {props.config.showPriority && !!kanji.p?.length && (
-                      <PriorityMark priority={kanji.p} />
-                    )}
-                    {props.config.waniKaniVocabDisplay !== 'hide' &&
-                      kanji.wk && (
-                        <WaniKanjiLevelTag level={kanji.wk} ent={kanji.ent} />
+                return (
+                  <Fragment key={kanji.ent}>
+                    {index > 0 && <span class="separator">、</span>}
+                    <span class={classes(dimmed && 'dimmed')}>
+                      {kanji.ent}
+                      {!!kanji.i?.length && <HeadwordInfo info={kanji.i} />}
+                      {props.config.showPriority && !!kanji.p?.length && (
+                        <PriorityMark priority={kanji.p} />
                       )}
-                    {props.config.bunproDisplay && kanji.bv && (
-                      <BunproTag data={kanji.bv} type="vocab" />
-                    )}
-                    {props.config.bunproDisplay && kanji.bg && (
-                      <BunproTag data={kanji.bg} type="grammar" />
-                    )}
-                  </span>
-                </Fragment>
-              );
-            })}
-          </span>
+                      {props.config.waniKaniVocabDisplay !== 'hide' &&
+                        kanji.wk && (
+                          <WaniKanjiLevelTag level={kanji.wk} ent={kanji.ent} />
+                        )}
+                      {props.config.bunproDisplay && kanji.bv && (
+                        <BunproTag data={kanji.bv} type="vocab" />
+                      )}
+                      {props.config.bunproDisplay && kanji.bg && (
+                        <BunproTag data={kanji.bg} type="grammar" />
+                      )}
+                    </span>
+                  </Fragment>
+                );
+              })}
+            </span>
+            <button
+              class="share-button"
+              onClick={handleShare(matchingKanji.map((k) => k.ent).join('、'))}
+              title={
+                t(
+                  'share_button_title',
+                  matchingKanji.map((k) => k.ent).join('、')
+                ) || 'Share'
+              }
+            >
+              <Share />
+            </button>
+          </div>
         )}
 
         {matchingKana.length > 0 && (
-          <span class="w-kana" lang="ja">
-            {matchingKana.map((kana, index) => {
-              // Dim irrelevant headwords
-              const dimmed =
-                // If we looked up by kanji, dim any kana headwords that are
-                // irregular, old, or rare.
-                !matchedOnKana &&
-                (kana.i?.includes('ik') ||
-                  kana.i?.includes('ok') ||
-                  kana.i?.includes('rk'));
+          <div class="tp:flex tp:items-center">
+            <span class="w-kana" lang="ja">
+              {matchingKana.map((kana, index) => {
+                // Dim irrelevant headwords
+                const dimmed =
+                  // If we looked up by kanji, dim any kana headwords that are
+                  // irregular, old, or rare.
+                  !matchedOnKana &&
+                  (kana.i?.includes('ik') ||
+                    kana.i?.includes('ok') ||
+                    kana.i?.includes('rk'));
 
-              return (
-                <Fragment key={kana.ent}>
-                  {index > 0 && <span class="separator">、</span>}
-                  <span class={dimmed ? 'dimmed' : undefined}>
-                    <Reading
-                      kana={kana}
-                      accentDisplay={props.config.accentDisplay}
-                    />
-                    {!!kana.i?.length && <HeadwordInfo info={kana.i} />}
-                    {props.config.showPriority && !!kana.p?.length && (
-                      <PriorityMark priority={kana.p} />
-                    )}
-                    {props.config.bunproDisplay && kana.bv && (
-                      <BunproTag data={kana.bv} type="vocab" />
-                    )}
-                    {props.config.bunproDisplay && kana.bg && (
-                      <BunproTag data={kana.bg} type="grammar" />
-                    )}
-                  </span>
-                </Fragment>
-              );
-            })}
-          </span>
+                return (
+                  <Fragment key={kana.ent}>
+                    {index > 0 && <span class="separator">、</span>}
+                    <span class={dimmed ? 'dimmed' : undefined}>
+                      <Reading
+                        kana={kana}
+                        accentDisplay={props.config.accentDisplay}
+                      />
+                      {!!kana.i?.length && <HeadwordInfo info={kana.i} />}
+                      {props.config.showPriority && !!kana.p?.length && (
+                        <PriorityMark priority={kana.p} />
+                      )}
+                      {props.config.bunproDisplay && kana.bv && (
+                        <BunproTag data={kana.bv} type="vocab" />
+                      )}
+                      {props.config.bunproDisplay && kana.bg && (
+                        <BunproTag data={kana.bg} type="grammar" />
+                      )}
+                    </span>
+                  </Fragment>
+                );
+              })}
+            </span>
+            <button
+              class="share-button"
+              onClick={handleShare(matchingKana.map((k) => k.ent).join('、'))}
+              title={
+                t(
+                  'share_button_title',
+                  matchingKana.map((k) => k.ent).join('、')
+                ) || 'Share'
+              }
+            >
+              <Share />
+            </button>
+          </div>
         )}
 
         {!!entry.romaji?.length && (

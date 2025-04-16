@@ -5,16 +5,16 @@
   "manifest_version": 2,
   /*#endif*/
   /*#if include_rikaichamp_name*/
-  "name": "10ten Japanese Reader (Rikaichamp)",
+  "name": "10ten Japanese Reader - Share Button",
   /*#else*/
-  "name": "10ten Japanese Reader",
+  "name": "10ten Japanese Reader - Share Button",
   /*#endif*/
   "author": "Brian Birtles",
   "version": "1.24.2",
   /*#if supports_browser_specific_settings*/
   "browser_specific_settings": {
     "gecko": {
-      "id": "{59812185-ea92-4cca-8ab7-cfcacee81281}",
+      "id": "10ten-share@evandavis.dev",
       /*#if mail_extension */
       "strict_min_version": "91.0"
       /*#else*/

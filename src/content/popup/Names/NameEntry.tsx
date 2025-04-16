@@ -5,6 +5,7 @@ import { useLocale } from '../../../common/i18n';
 import { getDob } from '../../../utils/age';
 import { classes } from '../../../utils/classes';
 
+import { Share } from '../Icons/Share';
 import { usePopupOptions } from '../options-context';
 
 type SelectState = 'unselected' | 'selected' | 'flash';
@@ -16,10 +17,27 @@ type Props = {
   onClick?: () => void;
 };
 
+// Handle share button click
+const handleShare = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Use Web Share API if available (e.g. on Android)
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {
+      // Fallback to clipboard if sharing fails
+      navigator.clipboard.writeText(text);
+    });
+  } else {
+    // Fallback to clipboard on desktop
+    navigator.clipboard.writeText(text);
+  }
+};
+
 export function NameEntry(props: Props) {
   const { interactive } = usePopupOptions();
 
   const kana = props.entry.r.join('、');
+  const kanji = props.entry.k?.join('、') || '';
 
   return (
     <div
@@ -50,7 +68,7 @@ export function NameEntry(props: Props) {
       onPointerUp={props.onPointerUp}
       onClick={props.onClick}
     >
-      <div class="tp:space-x-4" lang="ja">
+      <div class="tp:flex tp:items-center tp:space-x-4" lang="ja">
         {props.entry.k?.length && (
           <KanjiEntries k={props.entry.k} selectState={props.selectState} />
         )}
@@ -65,6 +83,13 @@ export function NameEntry(props: Props) {
         >
           {kana}
         </span>
+        <button
+          class="share-button"
+          onClick={handleShare(kanji ? `${kanji} (${kana})` : kana)}
+          title="Share name"
+        >
+          <Share />
+        </button>
       </div>
       <div>
         {props.entry.tr.map((tr) => (

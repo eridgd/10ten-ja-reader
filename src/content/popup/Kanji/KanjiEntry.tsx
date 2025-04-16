@@ -4,6 +4,8 @@ import { useRef } from 'preact/hooks';
 import type { ReferenceAbbreviation } from '../../../common/refs';
 import { classes } from '../../../utils/classes';
 
+import { Share } from '../Icons/Share';
+
 import { usePopupOptions } from './../options-context';
 import { containerHasSelectedText } from './../selection';
 import type { StartCopyCallback } from './../show-popup';
@@ -74,23 +76,50 @@ type KanjiCharacterProps = {
   st?: string;
 };
 
+// Handle share button click
+const handleShare = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Use Web Share API if available (e.g. on Android)
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {
+      // Fallback to clipboard if sharing fails
+      navigator.clipboard.writeText(text);
+    });
+  } else {
+    // Fallback to clipboard on desktop
+    navigator.clipboard.writeText(text);
+  }
+};
+
 function KanjiCharacter(props: KanjiCharacterProps) {
   const { interactive } = usePopupOptions();
 
   // There's no way to trigger the animation when we're not in "mouse
   // interactive" mode so just show the static character in that case.
-  return props.st && interactive ? (
-    <KanjiStrokeAnimation
-      onClick={props.onClick}
-      selectState={props.selectState}
-      st={props.st}
-    />
-  ) : (
-    <StaticKanjiCharacter
-      c={props.c}
-      onClick={props.onClick}
-      selectState={props.selectState}
-    />
+  return (
+    <div class="tp:flex tp:flex-col tp:items-center">
+      {props.st && interactive ? (
+        <KanjiStrokeAnimation
+          onClick={props.onClick}
+          selectState={props.selectState}
+          st={props.st}
+        />
+      ) : (
+        <StaticKanjiCharacter
+          c={props.c}
+          onClick={props.onClick}
+          selectState={props.selectState}
+        />
+      )}
+      <button
+        class="share-button tp:mt-2"
+        onClick={handleShare(props.c)}
+        title="Share kanji"
+      >
+        <Share />
+      </button>
+    </div>
   );
 }
 
