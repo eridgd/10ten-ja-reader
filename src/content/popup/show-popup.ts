@@ -27,6 +27,9 @@ import {
 } from './popup-position';
 import { renderPopup, renderPopupArrow } from './render-popup';
 
+// Extended data series type to include the pad tab
+export type ExtendedDataSeries = MajorDataSeries | 'pad';
+
 // There are a _lot_ of options here. Once we've converted the popup to Preact
 // we should be able to move some of this state into component state.
 export type ShowPopupOptions = {
@@ -42,7 +45,7 @@ export type ShowPopupOptions = {
     includeLessCommonHeadwords: boolean;
     includePartOfSpeech: boolean;
   };
-  dictToShow: MajorDataSeries;
+  dictToShow: ExtendedDataSeries;
   dictLang: string;
   displayMode: DisplayMode;
   fixedPosition?: PopupPositionConstraints;
@@ -63,7 +66,7 @@ export type ShowPopupOptions = {
   onClosePopup?: () => void;
   onExpandPopup?: () => void;
   onShowSettings?: () => void;
-  onSwitchDictionary?: (newDict: MajorDataSeries | 'next' | 'prev') => void;
+  onSwitchDictionary?: (newDict: ExtendedDataSeries | 'next' | 'prev') => void;
   onTogglePin?: () => void;
   pinShortcuts?: ReadonlyArray<string>;
   pointerType: 'cursor' | 'puck';

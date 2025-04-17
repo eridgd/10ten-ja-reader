@@ -1,0 +1,47 @@
+.pad-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+}
+
+.pad-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.pad-textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+}
+
+.pad-textarea:focus {
+  outline: none;
+  border-color: var(--border-highlight-color, var(--border-color));
+}
+
+.clear-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.clear-button:hover {
+  background: var(--hover-bg);
+} 

@@ -1,4 +1,6 @@
 /// <reference path="../../common/css.d.ts" />
+import { h, render } from 'preact';
+
 import type { FontFace, FontSize } from '../../common/content-config-params';
 import { html } from '../../utils/builder';
 import { Point } from '../../utils/geometry';
@@ -9,6 +11,7 @@ import { DisplayMode } from '../popup-state';
 import { LookupPuckId } from '../puck';
 import { QueryResult } from '../query';
 
+import { Pad } from './Tabs/Pad';
 import { renderArrow } from './arrow';
 import { renderCloseButton } from './close';
 import { renderCopyOverlay } from './copy-overlay';
@@ -21,6 +24,7 @@ import { renderNamesEntries } from './names';
 import { getPopupContainer } from './popup-container';
 import popupStyles from './popup.css?inline';
 import { ShowPopupOptions } from './show-popup';
+// import { ShowPopupOptions, ExtendedDataSeries } from './show-popup';
 import { renderCopyDetails, renderUpdatingStatus } from './status';
 import { onHorizontalSwipe } from './swipe';
 import { renderTabBar, showWordsTab } from './tabs';
@@ -63,6 +67,7 @@ export function renderPopup(
       words: showWordsTab(result, !!options.meta),
       kanji: !!result?.kanji,
       names: !!result?.names,
+      pad: true,
     };
 
     windowElem.append(
@@ -86,59 +91,18 @@ export function renderPopup(
     });
   }
 
-  const resultToShow = result?.[options.dictToShow];
+  // Handle Pad tab separately
+  if (options.dictToShow === 'pad') {
+    const padElement = html('div', { class: 'entry-data' });
+    render(h(Pad, {}), padElement);
+    contentContainer.append(padElement);
+  } else {
+    // Handle other tabs that depend on QueryResult data
+    const resultToShow = result?.[options.dictToShow];
 
-  switch (resultToShow?.type) {
-    case 'kanji':
-      contentContainer.append(
-        html(
-          'div',
-          { class: 'expandable' },
-          renderKanjiEntries({ entries: resultToShow.data, options })
-        )
-      );
-      break;
-
-    case 'names':
-      contentContainer.append(
-        renderNamesEntries({
-          entries: resultToShow.data,
-          matchLen: resultToShow.matchLen,
-          more: resultToShow.more,
-          options: {
-            ...options,
-            // Hide the meta if we have already shown it on the words tab
-            meta: result?.words ? undefined : options.meta,
-          },
-        })
-      );
-      break;
-
-    case 'words':
-      {
-        contentContainer.append(
-          html(
-            'div',
-            { class: 'expandable' },
-            renderWordEntries({
-              entries: resultToShow.data,
-              matchLen: resultToShow.matchLen,
-              more: resultToShow.more,
-              namePreview: result!.namePreview,
-              options,
-              title: result!.title,
-            })
-          )
-        );
-      }
-      break;
-
-    default:
-      {
-        if (!options.meta) {
-          return null;
-        }
-
+    if (!resultToShow) {
+      // No result to show but we might still show metadata
+      if (options.meta) {
         const metadata = renderMetadata({
           fxData: options.fxData,
           preferredUnits: options.preferredUnits,
@@ -147,15 +111,62 @@ export function renderPopup(
           meta: options.meta,
           metaonly: true,
         });
-        if (!metadata) {
+        if (metadata) {
+          contentContainer.append(
+            html('div', { class: 'wordlist entry-data' }, metadata)
+          );
+        } else {
           return null;
         }
-
-        contentContainer.append(
-          html('div', { class: 'wordlist entry-data' }, metadata)
-        );
+      } else {
+        return null;
       }
-      break;
+    } else {
+      // Handle different result types
+      switch (resultToShow.type) {
+        case 'kanji':
+          contentContainer.append(
+            html(
+              'div',
+              { class: 'expandable' },
+              renderKanjiEntries({ entries: resultToShow.data, options })
+            )
+          );
+          break;
+
+        case 'names':
+          contentContainer.append(
+            renderNamesEntries({
+              entries: resultToShow.data,
+              matchLen: resultToShow.matchLen,
+              more: resultToShow.more,
+              options: {
+                ...options,
+                // Hide the meta if we have already shown it on the words tab
+                meta: result?.words ? undefined : options.meta,
+              },
+            })
+          );
+          break;
+
+        case 'words':
+          contentContainer.append(
+            html(
+              'div',
+              { class: 'expandable' },
+              renderWordEntries({
+                entries: resultToShow.data,
+                matchLen: resultToShow.matchLen,
+                more: resultToShow.more,
+                namePreview: result.namePreview,
+                options,
+                title: result.title,
+              })
+            )
+          );
+          break;
+      }
+    }
   }
 
   // Render the copy overlay if needed
@@ -175,8 +186,10 @@ export function renderPopup(
           kanjiReferences: options.kanjiReferences,
           onCancelCopy: options.onCancelCopy,
           onCopy: options.onCopy,
-          result: resultToShow ? result : undefined,
-          series: options.dictToShow,
+          // Don't pass result for pad tab
+          result: options.dictToShow === 'pad' ? undefined : result,
+          // Use 'words' as fallback for pad tab
+          series: options.dictToShow === 'pad' ? 'words' : options.dictToShow,
           showKanjiComponents: options.showKanjiComponents,
         })
       )
@@ -211,7 +224,11 @@ export function renderPopup(
   const copyDetails = renderCopyDetails({
     copyNextKey: options.copyNextKey,
     copyState: options.copyState,
-    series: resultToShow?.type || 'words',
+    // Use 'words' as fallback for pad tab
+    series:
+      options.dictToShow === 'pad'
+        ? 'words'
+        : result?.[options.dictToShow]?.type || 'words',
   });
 
   let statusBar: HTMLElement | null = null;
@@ -278,8 +295,19 @@ function getDefaultContainer(): HTMLElement {
     legacyIds: ['rikaichamp-window'],
   });
 
-  // Make sure our popup doesn't get inverted by Wikipedia's (experimental) dark
-  // mode.
+  // TODO: Create shadow root in getOrCreateEmptyContainer.
+  let shadow = defaultContainer.shadowRoot;
+  if (!shadow) {
+    shadow = defaultContainer.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = popupStyles;
+    shadow.append(style);
+  }
+
+  // For Wikipedia we need to be careful to not use any invert filters.
+  //
+  // As of this writing Wikipedia's infoboxes have their own invert color in
+  // dark mode that we don't need to (and should not) cancel out.
   if (document.location.hostname.endsWith('wikipedia.org')) {
     defaultContainer.classList.add('mw-no-invert');
     defaultContainer.style.filter = 'inherit';
@@ -324,26 +352,35 @@ function resetContainer({
   }
 
   if (host.shadowRoot) {
-    host.shadowRoot.append(container);
-  } else {
-    host.append(container);
-  }
+    const contentElem = host.shadowRoot.querySelector<HTMLElement>('.container');
+    if (contentElem) {
+      // Set aria-hidden to true for the element we're about to replace.
+      contentElem.setAttribute('aria-hidden', 'true');
 
-  // Reset the container position and size so that we can consistently measure
-  // the size of the popup.
-  host.style.removeProperty('--tenten-left');
-  host.style.removeProperty('--tenten-top');
-  host.style.removeProperty('--tenten-max-width');
-  host.style.removeProperty('--tenten-max-height');
+      // Clear any old elements out
+      host.shadowRoot.replaceChild(container, contentElem);
+    } else {
+      // Fresh popup, host has a shadow DOM but no container
+      host.shadowRoot.append(container);
+    }
+  } else {
+    // TODO: Remove this case once we've migrated completely to using a shadow DOM.
+    // (As of this writing we only use this when we have a foreign object element
+    // as the host.)
+    const contentElem = host.querySelector<HTMLElement>('.container');
+    if (contentElem) {
+      contentElem.setAttribute('aria-hidden', 'true');
+      host.replaceChild(container, contentElem);
+    } else {
+      host.append(container);
+    }
+  }
 
   return windowDiv;
 }
 
 function showOverlay(copyState: CopyState): boolean {
-  return (
-    (copyState.kind === 'active' || copyState.kind === 'error') &&
-    (copyState.mode === 'touch' || copyState.mode === 'mouse')
-  );
+  return copyState?.kind === 'active';
 }
 
 export function renderPopupArrow(options: {

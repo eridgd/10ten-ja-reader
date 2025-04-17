@@ -1,4 +1,16 @@
 {
+  "clear_pad_button": {
+    "message": "Clear",
+    "description": "Text for the clear button in the pad tab"
+  },
+  "clear_pad_button_title": {
+    "message": "Clear all text",
+    "description": "Tooltip for the clear button"
+  },
+  "clear_pad_confirm": {
+    "message": "Are you sure you want to clear all text?",
+    "description": "Confirmation message when clearing the pad"
+  },
   "command_toggle_checking": {
     "message": "Checking for updated dictionary data...",
     "description": "Tooltip for toolbar button when checking for updates."
@@ -1810,6 +1822,14 @@
     "description": "The word data series title and version",
     "placeholders": { "version": { "content": "$1", "example": "2.0.0" } }
   },
+  "pad_placeholder": {
+    "message": "Write notes here...",
+    "description": "Placeholder text for the notepad textarea"
+  },
+  "pad_tab_title": {
+    "message": "Notepad",
+    "description": "Title for the notepad icon"
+  },
   "popup_bp_grammar_tag": {
     "message": "BP N​$level$​ Grammar",
     "description": "The tag shown alongside a headword that is part of a Bunpro vocab deck indicating what level deck it is from",
@@ -2295,6 +2315,10 @@
   "tabs_names_label": {
     "message": "Names",
     "description": "The label for the names dictionary tab"
+  },
+  "tabs_pad_label": {
+    "message": "Pad",
+    "description": "Label for the notepad tab"
   },
   "tabs_words_label": {
     "message": "Words",

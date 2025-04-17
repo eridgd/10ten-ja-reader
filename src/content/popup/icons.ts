@@ -124,6 +124,20 @@ export function renderPin(): SVGElement {
   );
 }
 
+export function renderNotepad(): SVGElement {
+  return svg(
+    'svg',
+    { viewBox: '0 0 16 16', role: 'presentation' },
+    svg('circle', { cx: '14.5', cy: '14.5', r: '1.5' }),
+    svg('path', {
+      d: 'M11,15H2a2,2,0,0,1-2-2V2A2,2,0,0,1,2,0h9a2,2,0,0,1,2,2v11A2,2,0,0,1,11,15ZM2,2V13h9V2Z',
+    }),
+    svg('path', { d: 'M3.5,5h5a.5.5,0,0,0,0-1h-5a.5.5,0,0,0,0,1Z' }),
+    svg('path', { d: 'M3.5,8h5a.5.5,0,0,0,0-1h-5a.5.5,0,0,0,0,1Z' }),
+    svg('path', { d: 'M3.5,11h5a.5.5,0,0,0,0-1h-5a.5.5,0,0,0,0,1Z' })
+  );
+}
+
 export function renderSpinner(): SVGElement {
   return svg(
     'svg',
