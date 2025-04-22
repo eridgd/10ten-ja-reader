@@ -1,4 +1,5 @@
 import { Fragment } from 'preact';
+import browser from 'webextension-polyfill';
 
 import { WordResult } from '../../../background/search-result';
 import { ContentConfigParams } from '../../../common/content-config-params';
@@ -6,6 +7,7 @@ import { useLocale } from '../../../common/i18n';
 import { highPriorityLabels } from '../../../common/priority-labels';
 import { classes } from '../../../utils/classes';
 
+import { AddToPad } from '../Icons/AddToPad';
 import { Share } from '../Icons/Share';
 import { Star } from '../Icons/Star';
 
@@ -48,6 +50,25 @@ const handleShare = (text: string) => (e: MouseEvent) => {
     // Fallback to clipboard on desktop
     navigator.clipboard.writeText(text);
   }
+};
+
+// Handle add to pad button click
+const handleAddToPad = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Add success animation
+  const button = e.currentTarget as HTMLElement;
+  button.classList.add('add-to-pad-success');
+  setTimeout(() => {
+    button.classList.remove('add-to-pad-success');
+  }, 400); // Match the duration in CSS
+
+  const PAD_STORAGE_KEY = '10ten-ja-reader-pad';
+  browser.storage.local.get(PAD_STORAGE_KEY).then((result) => {
+    const currentContent = (result[PAD_STORAGE_KEY] as string) || '';
+    const newContent = currentContent ? `${currentContent}\n${text}` : text;
+    browser.storage.local.set({ [PAD_STORAGE_KEY]: newContent });
+  });
 };
 
 export function WordEntry(props: WordEntryProps) {
@@ -193,18 +214,31 @@ export function WordEntry(props: WordEntryProps) {
                 );
               })}
             </span>
-            <button
-              class="share-button"
-              onClick={handleShare(matchingKanji.map((k) => k.ent).join('、'))}
-              title={
-                t(
-                  'share_button_title',
+            <div class="tp:flex tp:space-x-1">
+              <button
+                class="share-button"
+                onClick={handleShare(
                   matchingKanji.map((k) => k.ent).join('、')
-                ) || 'Share'
-              }
-            >
-              <Share />
-            </button>
+                )}
+                title={
+                  t(
+                    'share_button_title',
+                    matchingKanji.map((k) => k.ent).join('、')
+                  ) || 'Share'
+                }
+              >
+                <Share />
+              </button>
+              <button
+                class="share-button"
+                onClick={handleAddToPad(
+                  matchingKanji.map((k) => k.ent).join('、')
+                )}
+                title={t('add_to_pad_button_title')}
+              >
+                <AddToPad />
+              </button>
+            </div>
           </div>
         )}
 
@@ -244,18 +278,29 @@ export function WordEntry(props: WordEntryProps) {
                 );
               })}
             </span>
-            <button
-              class="share-button"
-              onClick={handleShare(matchingKana.map((k) => k.ent).join('、'))}
-              title={
-                t(
-                  'share_button_title',
+            <div class="tp:flex tp:space-x-1">
+              <button
+                class="share-button"
+                onClick={handleShare(matchingKana.map((k) => k.ent).join('、'))}
+                title={
+                  t(
+                    'share_button_title',
+                    matchingKana.map((k) => k.ent).join('、')
+                  ) || 'Share'
+                }
+              >
+                <Share />
+              </button>
+              <button
+                class="share-button"
+                onClick={handleAddToPad(
                   matchingKana.map((k) => k.ent).join('、')
-                ) || 'Share'
-              }
-            >
-              <Share />
-            </button>
+                )}
+                title={t('add_to_pad_button_title')}
+              >
+                <AddToPad />
+              </button>
+            </div>
           </div>
         )}
 

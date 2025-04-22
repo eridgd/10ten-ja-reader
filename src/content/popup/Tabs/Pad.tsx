@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import browser from 'webextension-polyfill';
 
 import { useLocale } from '../../../common/i18n';
@@ -7,43 +7,51 @@ import { Share } from '../Icons/Share';
 
 import './Pad.css';
 
-const PAD_STORAGE_KEY = '10ten-ja-reader-pad';
-
 export function Pad() {
   const { t } = useLocale();
   const [padContent, setPadContent] = useState('');
+  const PAD_STORAGE_KEY = '10ten-ja-reader-pad';
 
-  // Load pad content from storage on mount
   useEffect(() => {
-    const loadPadContent = async () => {
-      const result = await browser.storage.local.get(PAD_STORAGE_KEY);
-      setPadContent((result[PAD_STORAGE_KEY] as string) || '');
-    };
-    loadPadContent();
+    // Load pad content from storage
+    browser.storage.local.get(PAD_STORAGE_KEY).then((result) => {
+      const storedContent = (result[PAD_STORAGE_KEY] as string) || '';
+      setPadContent(storedContent);
+    });
   }, []);
 
-  // Save pad content to storage whenever it changes
-  useEffect(() => {
-    if (padContent !== undefined) {
-      browser.storage.local.set({ [PAD_STORAGE_KEY]: padContent });
-    }
-  }, [padContent]);
-
-  const handleShare = useCallback(() => {
-    if (navigator.share) {
-      navigator.share({ text: padContent }).catch(() => {
+  const handleShare = () => {
+    if (padContent) {
+      if (navigator.share) {
+        navigator.share({ text: padContent }).catch(() => {
+          navigator.clipboard.writeText(padContent);
+        });
+      } else {
         navigator.clipboard.writeText(padContent);
-      });
-    } else {
-      navigator.clipboard.writeText(padContent);
+      }
     }
-  }, [padContent]);
+  };
 
-  const handleClear = useCallback(() => {
+  const handleClear = () => {
     if (confirm(t('clear_pad_confirm'))) {
       setPadContent('');
+      browser.storage.local.set({ [PAD_STORAGE_KEY]: '' });
     }
-  }, [t]);
+  };
+
+  const handleTextChange = (e: Event) => {
+    const newContent = (e.target as HTMLTextAreaElement).value;
+    setPadContent(newContent);
+    // Save to storage
+    browser.storage.local.set({ [PAD_STORAGE_KEY]: newContent });
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Prevent tab switching when Enter is pressed
+    if (e.key === 'Enter') {
+      e.stopPropagation();
+    }
+  };
 
   return (
     <div class="pad-tab">
@@ -51,6 +59,7 @@ export function Pad() {
         <button
           class="share-button"
           onClick={handleShare}
+          disabled={!padContent}
           title={t('share_button_title')}
         >
           <Share />
@@ -58,6 +67,7 @@ export function Pad() {
         <button
           class="clear-button"
           onClick={handleClear}
+          disabled={!padContent}
           title={t('clear_pad_button_title')}
         >
           {t('clear_pad_button')}
@@ -66,7 +76,8 @@ export function Pad() {
       <textarea
         class="pad-textarea"
         value={padContent}
-        onInput={(e) => setPadContent(e.currentTarget.value)}
+        onInput={handleTextChange}
+        onKeyDown={handleKeyDown}
         placeholder={t('pad_placeholder')}
       />
     </div>

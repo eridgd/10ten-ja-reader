@@ -1,4 +1,8 @@
 {
+  "add_to_pad_button_title": {
+    "message": "Add to pad",
+    "description": "Tooltip for the button to add text to the pad"
+  },
   "clear_pad_button": {
     "message": "Clear",
     "description": "Text for the clear button in the pad tab"
@@ -285,7 +289,7 @@
   "deinflect_te": { "message": "-te" },
   "deinflect_toku": { "message": "-te oku" },
   "deinflect_volitional": { "message": "volitional" },
-  "deinflect_zaru_wo_enai": { "message": "“have no choice but to”" },
+  "deinflect_zaru_wo_enai": { "message": "" },
   "deinflect_zu": { "message": "-zu" },
   "dial_label_9s": {
     "message": "Kyushu dialect",

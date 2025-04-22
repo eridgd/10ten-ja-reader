@@ -1,10 +1,12 @@
 import { NameTranslation } from '@birchill/jpdict-idb';
+import browser from 'webextension-polyfill';
 
 import { NameResult } from '../../../background/search-result';
 import { useLocale } from '../../../common/i18n';
 import { getDob } from '../../../utils/age';
 import { classes } from '../../../utils/classes';
 
+import { AddToPad } from '../Icons/AddToPad';
 import { Share } from '../Icons/Share';
 import { usePopupOptions } from '../options-context';
 
@@ -33,8 +35,28 @@ const handleShare = (text: string) => (e: MouseEvent) => {
   }
 };
 
+// Handle add to pad button click
+const handleAddToPad = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Add success animation
+  const button = e.currentTarget as HTMLElement;
+  button.classList.add('add-to-pad-success');
+  setTimeout(() => {
+    button.classList.remove('add-to-pad-success');
+  }, 400); // Match the duration in CSS
+
+  const PAD_STORAGE_KEY = '10ten-ja-reader-pad';
+  browser.storage.local.get(PAD_STORAGE_KEY).then((result) => {
+    const currentContent = (result[PAD_STORAGE_KEY] as string) || '';
+    const newContent = currentContent ? `${currentContent}\n${text}` : text;
+    browser.storage.local.set({ [PAD_STORAGE_KEY]: newContent });
+  });
+};
+
 export function NameEntry(props: Props) {
   const { interactive } = usePopupOptions();
+  const { t } = useLocale();
 
   const kana = props.entry.r.join('、');
   const kanji = props.entry.k?.join('、') || '';
@@ -83,13 +105,25 @@ export function NameEntry(props: Props) {
         >
           {kana}
         </span>
-        <button
-          class="share-button"
-          onClick={handleShare(kanji ? `${kanji} (${kana})` : kana)}
-          title="Share name"
-        >
-          <Share />
-        </button>
+        <div class="tp:flex tp:space-x-1">
+          <button
+            class="share-button"
+            onClick={handleShare(kanji ? `${kanji} (${kana})` : kana)}
+            title={
+              t('share_button_title', kanji ? `${kanji} (${kana})` : kana) ||
+              'Share'
+            }
+          >
+            <Share />
+          </button>
+          <button
+            class="share-button"
+            onClick={handleAddToPad(kanji ? `${kanji} (${kana})` : kana)}
+            title={t('add_to_pad_button_title')}
+          >
+            <AddToPad />
+          </button>
+        </div>
       </div>
       <div>
         {props.entry.tr.map((tr) => (

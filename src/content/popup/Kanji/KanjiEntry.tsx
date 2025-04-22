@@ -1,9 +1,12 @@
 import type { KanjiResult } from '@birchill/jpdict-idb';
 import { useRef } from 'preact/hooks';
+import browser from 'webextension-polyfill';
 
+import { useLocale } from '../../../common/i18n';
 import type { ReferenceAbbreviation } from '../../../common/refs';
 import { classes } from '../../../utils/classes';
 
+import { AddToPad } from '../Icons/AddToPad';
 import { Share } from '../Icons/Share';
 
 import { usePopupOptions } from './../options-context';
@@ -92,8 +95,28 @@ const handleShare = (text: string) => (e: MouseEvent) => {
   }
 };
 
+// Handle add to pad button click
+const handleAddToPad = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Add success animation
+  const button = e.currentTarget as HTMLElement;
+  button.classList.add('add-to-pad-success');
+  setTimeout(() => {
+    button.classList.remove('add-to-pad-success');
+  }, 400); // Match the duration in CSS
+
+  const PAD_STORAGE_KEY = '10ten-ja-reader-pad';
+  browser.storage.local.get(PAD_STORAGE_KEY).then((result) => {
+    const currentContent = (result[PAD_STORAGE_KEY] as string) || '';
+    const newContent = currentContent ? `${currentContent}\n${text}` : text;
+    browser.storage.local.set({ [PAD_STORAGE_KEY]: newContent });
+  });
+};
+
 function KanjiCharacter(props: KanjiCharacterProps) {
   const { interactive } = usePopupOptions();
+  const { t } = useLocale();
 
   // There's no way to trigger the animation when we're not in "mouse
   // interactive" mode so just show the static character in that case.
@@ -112,13 +135,22 @@ function KanjiCharacter(props: KanjiCharacterProps) {
           selectState={props.selectState}
         />
       )}
-      <button
-        class="share-button tp:mt-2"
-        onClick={handleShare(props.c)}
-        title="Share kanji"
-      >
-        <Share />
-      </button>
+      <div class="tp:flex tp:space-x-1 tp:mt-2">
+        <button
+          class="share-button"
+          onClick={handleShare(props.c)}
+          title={t('share_button_title', props.c) || 'Share'}
+        >
+          <Share />
+        </button>
+        <button
+          class="share-button"
+          onClick={handleAddToPad(props.c)}
+          title={t('add_to_pad_button_title')}
+        >
+          <AddToPad />
+        </button>
+      </div>
     </div>
   );
 }

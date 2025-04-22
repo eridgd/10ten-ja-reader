@@ -23,6 +23,8 @@
   line-height: 1.5;
   color: var(--text-color);
   background-color: var(--bg-color);
+  width: 100%;
+  min-height: 200px;
 }
 
 .pad-textarea:focus {
@@ -44,4 +46,27 @@
 
 .clear-button:hover {
   background: var(--hover-bg);
+}
+
+/* Animation for add to pad success */
+@keyframes add-to-pad-success {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    background-color: transparent;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+    background-color: rgba(0, 255, 0, 0.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    background-color: transparent;
+  }
+}
+
+.add-to-pad-success {
+  animation: add-to-pad-success 0.4s ease-in-out;
 } 
