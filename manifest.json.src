@@ -14,7 +14,7 @@
   /*#if supports_browser_specific_settings*/
   "browser_specific_settings": {
     "gecko": {
-      "id": "10ten-share@evandavis.dev",
+      "id": "{59812195-ea92-4cca-8ab7-cfcacee81282}",
       /*#if mail_extension */
       "strict_min_version": "91.0"
       /*#else*/
