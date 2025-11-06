@@ -8,7 +8,9 @@ import { highPriorityLabels } from '../../../common/priority-labels';
 import { classes } from '../../../utils/classes';
 
 import { AddToPad } from '../Icons/AddToPad';
+import { AppIntent } from '../Icons/AppIntent';
 import { Share } from '../Icons/Share';
+import { isFenix } from '../../../utils/ua-utils';
 import { Star } from '../Icons/Star';
 import { usePopupOptions } from '../options-context';
 import { serializeReasonChains } from '../serialize-reasons';
@@ -71,6 +73,18 @@ const handleAddToPad = (text: string) => (e: MouseEvent) => {
     const newContent = currentContent ? `${currentContent}\n${text}` : text;
     browser.storage.local.set({ [PAD_STORAGE_KEY]: newContent });
   });
+};
+
+// Handle Android intent (Akebi) button click
+const handleAppIntent = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation();
+
+  const url = `akebi://search?q=${encodeURIComponent(text)}`;
+  try {
+    window.open(url, '_blank');
+  } catch {
+    // ignore
+  }
 };
 
 export function WordEntry(props: WordEntryProps) {
@@ -285,6 +299,17 @@ export function WordEntry(props: WordEntryProps) {
               >
                 <AddToPad />
               </button>
+              {isFenix() && (
+                <button
+                  class="share-button"
+                  onClick={handleAppIntent(
+                    matchingKanji.map((k) => k.ent).join('、')
+                  )}
+                  title={t('android_intent_button_title') || 'Open in app'}
+                >
+                  <AppIntent />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -362,6 +387,17 @@ export function WordEntry(props: WordEntryProps) {
               >
                 <AddToPad />
               </button>
+              {isFenix() && (
+                <button
+                  class="share-button"
+                  onClick={handleAppIntent(
+                    matchingKana.map((k) => k.ent).join('、')
+                  )}
+                  title={t('android_intent_button_title') || 'Open in app'}
+                >
+                  <AppIntent />
+                </button>
+              )}
             </div>
           </div>
         )}

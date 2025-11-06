@@ -7,9 +7,11 @@ import { getDob } from '../../../utils/age';
 import { classes } from '../../../utils/classes';
 
 import { AddToPad } from '../Icons/AddToPad';
+import { AppIntent } from '../Icons/AppIntent';
 import { Share } from '../Icons/Share';
 import { Tag } from '../Tag';
 import { usePopupOptions } from '../options-context';
+import { isFenix } from '../../../utils/ua-utils';
 
 type SelectState = 'unselected' | 'selected' | 'flash';
 
@@ -53,6 +55,18 @@ const handleAddToPad = (text: string) => (e: MouseEvent) => {
     const newContent = currentContent ? `${currentContent}\n${text}` : text;
     browser.storage.local.set({ [PAD_STORAGE_KEY]: newContent });
   });
+};
+
+// Handle Android intent (Akebi) button click
+const handleAppIntent = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation();
+
+  const url = `akebi://search?q=${encodeURIComponent(text)}`;
+  try {
+    window.open(url, '_blank');
+  } catch {
+    // ignore
+  }
 };
 
 export function NameEntry(props: Props) {
@@ -123,6 +137,15 @@ export function NameEntry(props: Props) {
           >
             <AddToPad />
           </button>
+          {isFenix() && (
+            <button
+              class="share-button"
+              onClick={handleAppIntent(kanji ? `${kanji} (${kana})` : kana)}
+              title={t('android_intent_button_title') || 'Open in app'}
+            >
+              <AppIntent />
+            </button>
+          )}
         </div>
       </div>
       <div>
