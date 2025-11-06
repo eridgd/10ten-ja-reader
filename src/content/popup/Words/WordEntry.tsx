@@ -1,4 +1,5 @@
 import { Fragment } from 'preact';
+import browser from 'webextension-polyfill';
 
 import type { WordResult } from '../../../background/search-result';
 import type { ContentConfigParams } from '../../../common/content-config-params';
@@ -6,6 +7,8 @@ import { useLocale } from '../../../common/i18n';
 import { highPriorityLabels } from '../../../common/priority-labels';
 import { classes } from '../../../utils/classes';
 
+import { AddToPad } from '../Icons/AddToPad';
+import { Share } from '../Icons/Share';
 import { Star } from '../Icons/Star';
 import { usePopupOptions } from '../options-context';
 import { serializeReasonChains } from '../serialize-reasons';
@@ -33,6 +36,41 @@ export type WordEntryProps = {
   selectState: SelectState;
   onPointerUp?: (evt: PointerEvent) => void;
   onClick?: (evt: MouseEvent) => void;
+};
+
+// Handle share button click
+const handleShare = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Use Web Share API if available (e.g. on Android)
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {
+      // Fallback to clipboard if sharing fails
+      navigator.clipboard.writeText(text);
+    });
+  } else {
+    // Fallback to clipboard on desktop
+    navigator.clipboard.writeText(text);
+  }
+};
+
+// Handle add to pad button click
+const handleAddToPad = (text: string) => (e: MouseEvent) => {
+  e.stopPropagation(); // Prevent triggering copy mode
+
+  // Add success animation
+  const button = e.currentTarget as HTMLElement;
+  button.classList.add('add-to-pad-success');
+  setTimeout(() => {
+    button.classList.remove('add-to-pad-success');
+  }, 400); // Match the duration in CSS
+
+  const PAD_STORAGE_KEY = '10ten-ja-reader-pad';
+  browser.storage.local.get(PAD_STORAGE_KEY).then((result) => {
+    const currentContent = (result[PAD_STORAGE_KEY] as string) || '';
+    const newContent = currentContent ? `${currentContent}\n${text}` : text;
+    browser.storage.local.set({ [PAD_STORAGE_KEY]: newContent });
+  });
 };
 
 export function WordEntry(props: WordEntryProps) {
@@ -170,110 +208,162 @@ export function WordEntry(props: WordEntryProps) {
         )}
 
         {matchingKanji.length > 0 && (
-          <span
-            class={classes(
-              'tp:text-1.5xl',
-              'tp:text-(--primary-highlight)',
-              'tp:group-data-selected:text-(--selected-highlight)',
-              interactive && 'tp:group-hover:text-(--selected-highlight)'
-            )}
-            lang="ja"
-          >
-            {matchingKanji.map((kanji, index) => {
-              const ki = new Set(kanji.i || []);
+          <div class="tp:flex tp:items-center">
+            <span
+              class={classes(
+                'tp:text-1.5xl',
+                'tp:text-(--primary-highlight)',
+                'tp:group-data-selected:text-(--selected-highlight)',
+                interactive && 'tp:group-hover:text-(--selected-highlight)'
+              )}
+              lang="ja"
+            >
+              {matchingKanji.map((kanji, index) => {
+                const ki = new Set(kanji.i || []);
 
-              const dimmed =
-                // Always dim search-only kanji
-                ki.has('sK') ||
-                // Dim the non-matching kanji unless there are none because we
-                // matched only on search-only kanji headwords.
-                (!kanji.match && !matchedOnlyOnSearchOnlyKanji) ||
-                // If we matched on the reading, dim any kanji headwords that are
-                // irregular, old, or rare.
-                (matchedOnKana &&
-                  (ki.has('iK') || ki.has('oK') || ki.has('rK')));
+                const dimmed =
+                  // Always dim search-only kanji
+                  ki.has('sK') ||
+                  // Dim the non-matching kanji unless there are none because we
+                  // matched only on search-only kanji headwords.
+                  (!kanji.match && !matchedOnlyOnSearchOnlyKanji) ||
+                  // If we matched on the reading, dim any kanji headwords that are
+                  // irregular, old, or rare.
+                  (matchedOnKana &&
+                    (ki.has('iK') || ki.has('oK') || ki.has('rK')));
 
-              return (
-                <Fragment key={kanji.ent}>
-                  {index > 0 && <span class="tp:opacity-60">、</span>}
-                  <span
-                    class={classes('tp:space-x-2', dimmed && 'tp:opacity-60')}
-                  >
-                    <span class="tp:space-x-1">
-                      <span>{kanji.ent}</span>
-                      {!!kanji.i?.length && <HeadwordInfo info={kanji.i} />}
-                      {props.config.showPriority && !!kanji.p?.length && (
-                        <PriorityMark priority={kanji.p} />
+                return (
+                  <Fragment key={kanji.ent}>
+                    {index > 0 && <span class="tp:opacity-60">、</span>}
+                    <span
+                      class={classes('tp:space-x-2', dimmed && 'tp:opacity-60')}
+                    >
+                      <span class="tp:space-x-1">
+                        <span>{kanji.ent}</span>
+                        {!!kanji.i?.length && <HeadwordInfo info={kanji.i} />}
+                        {props.config.showPriority && !!kanji.p?.length && (
+                          <PriorityMark priority={kanji.p} />
+                        )}
+                      </span>
+
+                      {props.config.waniKaniVocabDisplay !== 'hide' &&
+                        kanji.wk && (
+                          <WaniKanjiLevelTag level={kanji.wk} ent={kanji.ent} />
+                        )}
+                      {props.config.bunproDisplay && kanji.bv && (
+                        <BunproTag data={kanji.bv} type="vocab" />
+                      )}
+                      {props.config.bunproDisplay && kanji.bg && (
+                        <BunproTag data={kanji.bg} type="grammar" />
                       )}
                     </span>
-
-                    {props.config.waniKaniVocabDisplay !== 'hide' &&
-                      kanji.wk && (
-                        <WaniKanjiLevelTag level={kanji.wk} ent={kanji.ent} />
-                      )}
-                    {props.config.bunproDisplay && kanji.bv && (
-                      <BunproTag data={kanji.bv} type="vocab" />
-                    )}
-                    {props.config.bunproDisplay && kanji.bg && (
-                      <BunproTag data={kanji.bg} type="grammar" />
-                    )}
-                  </span>
-                </Fragment>
-              );
-            })}
-          </span>
+                  </Fragment>
+                );
+              })}
+            </span>
+            <div class="tp:flex tp:space-x-1">
+              <button
+                class="share-button"
+                onClick={handleShare(
+                  matchingKanji.map((k) => k.ent).join('、')
+                )}
+                title={
+                  t(
+                    'share_button_title',
+                    matchingKanji.map((k) => k.ent).join('、')
+                  ) || 'Share'
+                }
+              >
+                <Share />
+              </button>
+              <button
+                class="share-button"
+                onClick={handleAddToPad(
+                  matchingKanji.map((k) => k.ent).join('、')
+                )}
+                title={t('add_to_pad_button_title')}
+              >
+                <AddToPad />
+              </button>
+            </div>
+          </div>
         )}
 
         {matchingKana.length > 0 && (
-          <span
-            class={classes(
-              'tp:text-xl',
-              'tp:text-(--reading-highlight)',
-              'tp:group-data-selected:text-(--selected-reading-highlight)',
-              interactive &&
-                'tp:group-hover:text-(--selected-reading-highlight)'
-            )}
-            lang="ja"
-          >
-            {matchingKana.map((kana, index) => {
-              // Dim irrelevant headwords
-              const dimmed =
-                // If we looked up by kanji, dim any kana headwords that are
-                // irregular, old, or rare.
-                !matchedOnKana &&
-                (kana.i?.includes('ik') ||
-                  kana.i?.includes('ok') ||
-                  kana.i?.includes('rk'));
+          <div class="tp:flex tp:items-center">
+            <span
+              class={classes(
+                'tp:text-xl',
+                'tp:text-(--reading-highlight)',
+                'tp:group-data-selected:text-(--selected-reading-highlight)',
+                interactive &&
+                  'tp:group-hover:text-(--selected-reading-highlight)'
+              )}
+              lang="ja"
+            >
+              {matchingKana.map((kana, index) => {
+                // Dim irrelevant headwords
+                const dimmed =
+                  // If we looked up by kanji, dim any kana headwords that are
+                  // irregular, old, or rare.
+                  !matchedOnKana &&
+                  (kana.i?.includes('ik') ||
+                    kana.i?.includes('ok') ||
+                    kana.i?.includes('rk'));
 
-              return (
-                <Fragment key={kana.ent}>
-                  {index > 0 && <span class="tp:opacity-60">、</span>}
-                  <span
-                    class={classes('tp:space-x-2', dimmed && 'tp:opacity-60')}
-                  >
-                    <span class="tp:space-x-1">
-                      <span>
-                        <Reading
-                          kana={kana}
-                          accentDisplay={props.config.accentDisplay}
-                        />
+                return (
+                  <Fragment key={kana.ent}>
+                    {index > 0 && <span class="tp:opacity-60">、</span>}
+                    <span
+                      class={classes('tp:space-x-2', dimmed && 'tp:opacity-60')}
+                    >
+                      <span class="tp:space-x-1">
+                        <span>
+                          <Reading
+                            kana={kana}
+                            accentDisplay={props.config.accentDisplay}
+                          />
+                        </span>
+                        {!!kana.i?.length && <HeadwordInfo info={kana.i} />}
+                        {props.config.showPriority && !!kana.p?.length && (
+                          <PriorityMark priority={kana.p} />
+                        )}
                       </span>
-                      {!!kana.i?.length && <HeadwordInfo info={kana.i} />}
-                      {props.config.showPriority && !!kana.p?.length && (
-                        <PriorityMark priority={kana.p} />
+                      {props.config.bunproDisplay && kana.bv && (
+                        <BunproTag data={kana.bv} type="vocab" />
+                      )}
+                      {props.config.bunproDisplay && kana.bg && (
+                        <BunproTag data={kana.bg} type="grammar" />
                       )}
                     </span>
-                    {props.config.bunproDisplay && kana.bv && (
-                      <BunproTag data={kana.bv} type="vocab" />
-                    )}
-                    {props.config.bunproDisplay && kana.bg && (
-                      <BunproTag data={kana.bg} type="grammar" />
-                    )}
-                  </span>
-                </Fragment>
-              );
-            })}
-          </span>
+                  </Fragment>
+                );
+              })}
+            </span>
+            <div class="tp:flex tp:space-x-1">
+              <button
+                class="share-button"
+                onClick={handleShare(matchingKana.map((k) => k.ent).join('、'))}
+                title={
+                  t(
+                    'share_button_title',
+                    matchingKana.map((k) => k.ent).join('、')
+                  ) || 'Share'
+                }
+              >
+                <Share />
+              </button>
+              <button
+                class="share-button"
+                onClick={handleAddToPad(
+                  matchingKana.map((k) => k.ent).join('、')
+                )}
+                title={t('add_to_pad_button_title')}
+              >
+                <AddToPad />
+              </button>
+            </div>
+          </div>
         )}
 
         {!!entry.romaji?.length && (

@@ -1,4 +1,3 @@
-import type { MajorDataSeries } from '@birchill/jpdict-idb';
 import browser from 'webextension-polyfill';
 
 import { html } from '../../utils/builder';
@@ -13,10 +12,12 @@ import {
   renderBook,
   renderCog,
   renderKanjiIcon,
+  renderNotepad,
   renderPerson,
   renderPin,
 } from './icons';
 import { getLangTag } from './lang-tag';
+import { ExtendedDataSeries } from './show-popup';
 
 export function renderTabBar({
   closeShortcuts,
@@ -31,13 +32,13 @@ export function renderTabBar({
 }: {
   closeShortcuts?: ReadonlyArray<string>;
   displayMode: DisplayMode;
-  enabledTabs: Record<MajorDataSeries, boolean>;
+  enabledTabs: Record<ExtendedDataSeries, boolean>;
   onClosePopup?: () => void;
   onShowSettings?: () => void;
-  onSwitchDictionary?: (newDict: MajorDataSeries) => void;
+  onSwitchDictionary?: (newDict: ExtendedDataSeries | 'next' | 'prev') => void;
   onTogglePin?: () => void;
   pinShortcuts?: ReadonlyArray<string>;
-  selectedTab: MajorDataSeries;
+  selectedTab: ExtendedDataSeries;
 }): HTMLElement {
   const tabBar = html('div', { class: 'tab-bar', lang: getLangTag() });
 
@@ -48,12 +49,13 @@ export function renderTabBar({
   const list = html('ul', { class: 'tabs' });
 
   const sections: Array<{
-    series: MajorDataSeries;
+    series: ExtendedDataSeries;
     renderIcon: () => SVGElement;
   }> = [
     { series: 'words', renderIcon: renderBook },
     { series: 'kanji', renderIcon: renderKanjiIcon },
     { series: 'names', renderIcon: renderPerson },
+    { series: 'pad', renderIcon: renderNotepad },
   ];
   for (const { series, renderIcon } of sections) {
     const li = html('li', { class: 'tab', role: 'presentation' });

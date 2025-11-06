@@ -1,0 +1,72 @@
+.pad-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+}
+
+.pad-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.pad-textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  width: 100%;
+  min-height: 200px;
+}
+
+.pad-textarea:focus {
+  outline: none;
+  border-color: var(--border-highlight-color, var(--border-color));
+}
+
+.clear-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.clear-button:hover {
+  background: var(--hover-bg);
+}
+
+/* Animation for add to pad success */
+@keyframes add-to-pad-success {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    background-color: transparent;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+    background-color: rgba(0, 255, 0, 0.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    background-color: transparent;
+  }
+}
+
+.add-to-pad-success {
+  animation: add-to-pad-success 0.4s ease-in-out;
+} 
