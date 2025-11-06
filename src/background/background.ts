@@ -48,32 +48,28 @@
 import Bugsnag from '@birchill/bugsnag-zero';
 import { AbortError, allDataSeries } from '@birchill/jpdict-idb';
 import * as s from 'superstruct';
-import browser, { Runtime, Tabs } from 'webextension-polyfill';
+import type { Runtime, Tabs } from 'webextension-polyfill';
+import browser from 'webextension-polyfill';
 
 import '../../manifest.json.src';
 
 import { Config } from '../common/config';
-import {
-  DbListenerMessage,
-  notifyDbStateUpdated,
-} from '../common/db-listener-messages';
+import type { DbListenerMessage } from '../common/db-listener-messages';
+import { notifyDbStateUpdated } from '../common/db-listener-messages';
 import { startBugsnag } from '../utils/bugsnag';
-import { stripFields } from '../utils/strip-fields';
-import { Split } from '../utils/type-helpers';
+import { omit } from '../utils/omit';
+import type { Split } from '../utils/type-helpers';
 
 import TabManager from './all-tab-manager';
-import {
-  BackgroundRequestSchema,
-  SearchOtherRequest,
-  SearchRequest,
-} from './background-request';
+import type { SearchOtherRequest, SearchRequest } from './background-request';
+import { BackgroundRequestSchema } from './background-request';
 import { setDefaultToolbarIcon, updateBrowserAction } from './browser-action';
 import { calculateEraDateTimeSpan } from './calculate-date';
 import { registerMenuListeners, updateContextMenus } from './context-menus';
 import { FxFetcher } from './fx-fetcher';
 import { isCurrentTabEnabled } from './is-current-tab-enabled';
+import type { JpdictStateWithFallback } from './jpdict';
 import {
-  JpdictStateWithFallback,
   cancelUpdateDb,
   deleteDb,
   initDb,
@@ -84,7 +80,7 @@ import {
   updateDb,
 } from './jpdict';
 import { shouldRequestPersistentStorage } from './quota-management';
-import { SearchOtherResult, SearchWordsResult } from './search-result';
+import type { SearchOtherResult, SearchWordsResult } from './search-result';
 
 //
 // Setup bugsnag
@@ -247,23 +243,10 @@ void config.ready.then(async () => {
 //
 
 let jpdictState: JpdictStateWithFallback = {
-  words: {
-    state: 'init',
-    version: null,
-    fallbackState: 'unloaded',
-  },
-  kanji: {
-    state: 'init',
-    version: null,
-  },
-  radicals: {
-    state: 'init',
-    version: null,
-  },
-  names: {
-    state: 'init',
-    version: null,
-  },
+  words: { state: 'init', version: null, fallbackState: 'unloaded' },
+  kanji: { state: 'init', version: null },
+  radicals: { state: 'init', version: null },
+  names: { state: 'init', version: null },
   updateState: { type: 'idle', lastCheck: null },
 };
 
@@ -425,10 +408,7 @@ async function searchWords({
     includeRomaji,
   });
 
-  return {
-    words,
-    dbStatus,
-  };
+  return { words, dbStatus };
 }
 
 async function searchOther({
@@ -659,7 +639,7 @@ browser.runtime.onMessage.addListener(
           if (sender.tab?.id) {
             tabManager.sendMessageToFrame({
               tabId: sender.tab.id,
-              message: { ...stripFields(request, ['frameId']), type },
+              message: { ...omit(request, 'frameId'), type },
               frameId: request.frameId,
             });
           }
@@ -810,9 +790,7 @@ browser.runtime.onPerformanceWarning?.addListener(async (details) => {
   // more information to fix them.
   void Bugsnag.notify(
     { name: 'PerformanceWarning', message: details.description },
-    {
-      metadata: { 'Performance warning': details },
-    }
+    { metadata: { 'Performance warning': details } }
   );
 });
 

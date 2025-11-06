@@ -1,6 +1,6 @@
-import { ContentConfigParams } from '../../../common/content-config-params';
+import type { ContentConfigParams } from '../../../common/content-config-params';
 
-import { CurrencyMeta } from '../../currency';
+import type { CurrencyMeta } from '../../currency';
 
 import { CurrencyInfo } from './CurrencyInfo';
 
@@ -14,11 +14,7 @@ const TEST_DATA: Array<{
       rate: 0.009115065781351295,
       timestamp: 1631754180485,
     },
-    meta: {
-      type: 'currency',
-      value: 88000,
-      matchLen: 0,
-    },
+    meta: { type: 'currency', value: 88000, matchLen: 0 },
   },
   {
     fxData: {
@@ -26,11 +22,7 @@ const TEST_DATA: Array<{
       rate: 10.688500558390665,
       timestamp: 1631754180485,
     },
-    meta: {
-      type: 'currency',
-      value: 88000,
-      matchLen: 0,
-    },
+    meta: { type: 'currency', value: 88000, matchLen: 0 },
   },
   {
     fxData: {
@@ -38,11 +30,7 @@ const TEST_DATA: Array<{
       rate: 0.033166509528545496,
       timestamp: 1631754180485,
     },
-    meta: {
-      type: 'currency',
-      value: 88000,
-      matchLen: 0,
-    },
+    meta: { type: 'currency', value: 88000, matchLen: 0 },
   },
   {
     fxData: {
@@ -50,11 +38,7 @@ const TEST_DATA: Array<{
       rate: 2.0997785505420689e-7,
       timestamp: 1631754180485,
     },
-    meta: {
-      type: 'currency',
-      value: 88000,
-      matchLen: 0,
-    },
+    meta: { type: 'currency', value: 88000, matchLen: 0 },
   },
 ];
 

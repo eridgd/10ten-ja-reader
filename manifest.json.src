@@ -10,7 +10,7 @@
   "name": "10ten Japanese Reader",
   /*#endif*/
   "author": "Brian Birtles",
-  "version": "1.23.0",
+  "version": "1.25.1",
   /*#if supports_browser_specific_settings*/
   "browser_specific_settings": {
     "gecko": {
@@ -145,6 +145,9 @@
       /*#if supports_match_about_blank*/
       "match_about_blank": true,
       /*#endif*/
+      /*#if supports_match_origin_as_fallback*/
+      "match_origin_as_fallback": true,
+      /*#endif*/
       "js": ["10ten-ja-content.js"],
       "all_frames": true,
       "run_at": "document_start"
@@ -163,7 +166,6 @@
     "resources": [
       "css/popup-fonts.css",
       "css/selection.css",
-      "docs/introducing-the-mouse.html",
       "fonts/*.woff2"
     ],
     "matches": [ "<all_urls>" ]
@@ -172,7 +174,6 @@
   "web_accessible_resources": [
     "css/popup-fonts.css",
     "css/selection.css",
-    "docs/introducing-the-mouse.html",
     "fonts/*.woff2"
   ],
   /*#endif*/

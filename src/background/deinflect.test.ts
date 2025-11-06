@@ -203,11 +203,7 @@ describe('deinflect', () => {
     for (const [inflected, plain, reason, type] of cases) {
       const result = deinflect(inflected as string);
       const match = result.find((candidate) => candidate.word == plain);
-      expect(match).toEqual({
-        reasonChains: [[reason]],
-        type,
-        word: plain,
-      });
+      expect(match).toEqual({ reasonChains: [[reason]], type, word: plain });
     }
   });
 
@@ -258,7 +254,7 @@ describe('deinflect', () => {
   });
 
   it('deinflects continuous forms of other irregular verbs', () => {
-    const cases: [string, string, Reason[]][] = [
+    const cases: Array<[string, string, Array<Reason>]> = [
       ['請うている', '請う', [Reason.Continuous]],
       ['乞うている', '乞う', [Reason.Continuous]],
       ['恋うている', '恋う', [Reason.Continuous]],
@@ -289,11 +285,7 @@ describe('deinflect', () => {
     for (const [inflected, plain, reasons] of cases) {
       const result = deinflect(inflected);
       const match = result.find((candidate) => candidate.word == plain);
-      expect(match).toEqual({
-        reasonChains: [reasons],
-        type: 2,
-        word: plain,
-      });
+      expect(match).toEqual({ reasonChains: [reasons], type: 2, word: plain });
     }
   });
 

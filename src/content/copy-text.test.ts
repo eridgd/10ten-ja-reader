@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { Reason } from '../background/deinflect';
+
 import { getEntryToCopy, getFieldsToCopy, getWordToCopy } from './copy-text';
 
 const getMessage = (id: string, replacements?: string | Array<string>) => {
@@ -59,6 +61,7 @@ describe('getWordToCopy', () => {
             },
           ],
           romaji: ['rikai'],
+          matchLen: 2,
         },
       })
     ).toEqual('理解');
@@ -88,7 +91,8 @@ describe('getWordToCopy', () => {
               match: true,
             },
           ],
-          reason: '< -te',
+          reasonChains: [[Reason.Te]],
+          matchLen: 2,
         },
       })
     ).toEqual('選ぶ');
@@ -115,6 +119,7 @@ describe('getWordToCopy', () => {
             },
           ],
           romaji: ['rikai'],
+          matchLen: 2,
         },
       })
     ).toEqual('理解');
@@ -161,6 +166,7 @@ describe('getWordToCopy', () => {
               match: true,
             },
           ],
+          matchLen: 4,
         },
       })
     ).toEqual('引き裂く, 引裂く');
@@ -177,14 +183,7 @@ describe('getWordToCopy', () => {
             { ent: '引裂く', match: false },
             { ent: '引きさく', match: true, i: ['sK'], matchRange: [0, 4] },
           ],
-          r: [
-            {
-              ent: 'ひきさく',
-              p: ['i1'],
-              a: 3,
-              match: true,
-            },
-          ],
+          r: [{ ent: 'ひきさく', p: ['i1'], a: 3, match: true }],
           s: [
             {
               g: [
@@ -206,6 +205,7 @@ describe('getWordToCopy', () => {
               match: true,
             },
           ],
+          matchLen: 4,
         },
       })
     ).toEqual('引き裂く, 引裂く');
@@ -232,6 +232,7 @@ describe('getWordToCopy', () => {
               match: true,
             },
           ],
+          matchLen: 4,
         },
       })
     ).toEqual('カネロニ, カネローニ');
@@ -258,28 +259,19 @@ describe('getWordToCopy', () => {
         type: 'kanji',
         data: {
           c: '士',
-          r: {
-            on: ['シ'],
-            kun: ['さむらい'],
-            na: ['お', 'ま'],
-          },
+          r: { on: ['シ'], kun: ['さむらい'], na: ['お', 'ま'] },
           m: ['gentleman', 'scholar', 'samurai', 'samurai radical (no. 33)'],
           rad: {
-            x: 33,
-            b: '⼠',
-            k: '士',
-            na: ['さむらい'],
-            m: ['gentleman', 'scholar', 'samurai'],
-            m_lang: 'en',
+            x: {
+              r: 33,
+              c: '⼠',
+              na: ['さむらい'],
+              m: ['gentleman', 'scholar', 'samurai'],
+              m_lang: 'en',
+            },
           },
           refs: {},
-          misc: {
-            sc: 3,
-            gr: 4,
-            freq: 526,
-            jlpt: 1,
-            kk: 7,
-          },
+          misc: { sc: 3, gr: 4, freq: 526, jlpt: 1, kk: 7 },
           m_lang: 'en',
           comp: [],
           cf: [],
@@ -301,6 +293,7 @@ describe('getEntryToCopy', () => {
             r: [{ ent: 'かんこくご', p: ['s1'], a: 0, match: true }],
             s: [{ pos: ['n'], g: [{ str: 'Korean (language)' }], match: true }],
             romaji: ['kankokugo'],
+            matchLen: 3,
           },
         },
         { getMessage }
@@ -332,6 +325,7 @@ describe('getEntryToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 4,
           },
         },
         { getMessage }
@@ -367,6 +361,7 @@ describe('getEntryToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 2,
           },
         },
         { getMessage }
@@ -418,6 +413,7 @@ describe('getEntryToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 4,
           },
         },
         { getMessage }
@@ -449,6 +445,7 @@ describe('getEntryToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 4,
           },
         },
         { getMessage }
@@ -544,6 +541,7 @@ describe('getEntryToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 4,
           },
         },
         {
@@ -590,30 +588,15 @@ describe('getEntryToCopy', () => {
             },
             m: ['slip out', 'extract'],
             rad: {
-              x: 64,
-              b: '⺘',
-              k: '扌',
-              na: ['てへん'],
-              m: ['hand'],
-              m_lang: 'en',
-              base: {
-                b: '⼿',
-                k: '手',
-                na: ['て'],
-                m: ['hand'],
-                m_lang: 'en',
-              },
+              x: { r: 64, c: '⼿', na: ['て'], m: ['hand'], m_lang: 'en' },
             },
             refs: {
               nelson_c: 1854,
               nelson_n: 2093,
               halpern_njecd: 246,
-              halpern_kkld: 183,
               halpern_kkld_2ed: 219,
-              heisig: 705,
               heisig6: 761,
               henshall: 1708,
-              sh_kk: 1713,
               sh_kk2: 1830,
               kanji_in_context: 769,
               kodansha_compact: 864,
@@ -621,37 +604,38 @@ describe('getEntryToCopy', () => {
               sh_desc: '3c4.10',
               conning: 1951,
             },
-            misc: {
-              sc: 7,
-              gr: 8,
-              freq: 726,
-              jlpt: 2,
-              kk: 4,
-            },
+            misc: { sc: 7, gr: 8, freq: 726, jlpt: 2, kk: 4, wk: 25, jlptn: 1 },
+            st: 'M10.8 37.4q2.9.5 5.8.2c4.7-.6 11.8-2 18.4-3l3.7-.3M27.3 14.8q1.5 1.5 1.5 5v65.6c0 11.6-4.9 3.8-6.3 2.3M11 68.7q1.6 1.4 4.5-.4c5-3.4 12.8-9.8 24-17.9M45.1 36.5c2 .6 5 .4 7 0C63.2 34.6 72 33 82 31.8q3.4-.4 6.6.2M61 15.6c.5.9.6 1.6.6 3-.7 17.9-6.1 50.8-25.6 68.9M59.6 52q2.3.2 4.7-.5c5.8-1.4 10.6-3.1 14.8-4.1 3.1-.8 4 1 3.2 3C78 61.5 65.3 84 44 94.6M57 58.8c5.6 4.7 19 19 27.3 26q3.9 3.5 8.5 6',
             comp: [
               {
-                c: '⼇',
-                na: ['なべぶた', 'けいさん', 'けいさんかんむり'],
-                m: ['lid'],
-                m_lang: 'en',
-              },
-              {
-                c: '⼜',
-                na: ['また'],
-                m: ['or again', 'furthermore', 'on the other hand'],
-                m_lang: 'en',
-              },
-              {
-                c: '⼡',
-                na: ['ふゆがしら', 'のまたかんむり', 'のまた', 'ちかんむり'],
-                m: ['winter'],
-                m_lang: 'en',
-              },
-              {
                 c: '⺘',
+                k: '手',
                 na: ['てへん'],
                 m: ['hand'],
                 m_lang: 'en',
+                base: {
+                  c: '⼿',
+                  k: '手',
+                  na: ['て'],
+                  m: ['hand'],
+                  m_lang: 'en',
+                },
+                is_rad: true,
+              },
+              {
+                c: '友',
+                na: ['とも'],
+                m: ['friend'],
+                m_lang: 'en',
+                sub: [
+                  {
+                    c: '⼜',
+                    k: '又',
+                    na: ['また'],
+                    m: ['or again', 'furthermore', 'on the other hand'],
+                    m_lang: 'en',
+                  },
+                ],
               },
             ],
             m_lang: 'en',
@@ -676,7 +660,7 @@ describe('getEntryToCopy', () => {
         }
       )
     ).toEqual(
-      '抜 [バツ、ハツ、ハイ、ぬ.く、ぬ.ける、ぬ.かす、ぬ.かる] (ぬき) slip out, extract; radical: ⺘（てへん） from ⼿ (て); components: ⼇ (なべぶた, lid), ⼜ (また, or again), ⼡ (ふゆがしら, winter), ⺘ (てへん, hand); Classic Nelson 1854; Conning 1951; Henshall 1708; Japanese for Busy People -; JLPT 2; Kanji Kentei 4; Radical 64 ⼿; SKIP 1-3-4; Unicode U+629C'
+      '抜 [バツ、ハツ、ハイ、ぬ.く、ぬ.ける、ぬ.かす、ぬ.かる] (ぬき) slip out, extract; radical: ⼿ (て); components: ⺘ (てへん, hand), 友 (とも, friend) [⼜ (また, or again)]; Classic Nelson 1854; Conning 1951; Henshall 1708; Japanese for Busy People -; JLPT 2; Kanji Kentei 4; Radical 64 ⼿; SKIP 1-3-4; Unicode U+629C'
     );
   });
 });
@@ -706,6 +690,7 @@ describe('getFieldsToCopy', () => {
               },
             ],
             romaji: ['kankoku'],
+            matchLen: 2,
           },
         },
         { getMessage }
@@ -757,6 +742,7 @@ describe('getFieldsToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 4,
           },
         },
         { getMessage }
@@ -788,6 +774,7 @@ describe('getFieldsToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 4,
           },
         },
         { getMessage }
@@ -883,6 +870,7 @@ describe('getFieldsToCopy', () => {
                 match: true,
               },
             ],
+            matchLen: 4,
           },
         },
         {
@@ -931,30 +919,15 @@ describe('getFieldsToCopy', () => {
             },
             m: ['slip out', 'extract'],
             rad: {
-              x: 64,
-              b: '⺘',
-              k: '扌',
-              na: ['てへん'],
-              m: ['hand'],
-              m_lang: 'en',
-              base: {
-                b: '⼿',
-                k: '手',
-                na: ['て'],
-                m: ['hand'],
-                m_lang: 'en',
-              },
+              x: { r: 64, c: '⼿', na: ['て'], m: ['hand'], m_lang: 'en' },
             },
             refs: {
               nelson_c: 1854,
               nelson_n: 2093,
               halpern_njecd: 246,
-              halpern_kkld: 183,
               halpern_kkld_2ed: 219,
-              heisig: 705,
               heisig6: 761,
               henshall: 1708,
-              sh_kk: 1713,
               sh_kk2: 1830,
               kanji_in_context: 769,
               kodansha_compact: 864,
@@ -962,37 +935,38 @@ describe('getFieldsToCopy', () => {
               sh_desc: '3c4.10',
               conning: 1951,
             },
-            misc: {
-              sc: 7,
-              gr: 8,
-              freq: 726,
-              jlpt: 2,
-              kk: 4,
-            },
+            misc: { sc: 7, gr: 8, freq: 726, jlpt: 2, kk: 4, wk: 25, jlptn: 1 },
+            st: 'M10.8 37.4q2.9.5 5.8.2c4.7-.6 11.8-2 18.4-3l3.7-.3M27.3 14.8q1.5 1.5 1.5 5v65.6c0 11.6-4.9 3.8-6.3 2.3M11 68.7q1.6 1.4 4.5-.4c5-3.4 12.8-9.8 24-17.9M45.1 36.5c2 .6 5 .4 7 0C63.2 34.6 72 33 82 31.8q3.4-.4 6.6.2M61 15.6c.5.9.6 1.6.6 3-.7 17.9-6.1 50.8-25.6 68.9M59.6 52q2.3.2 4.7-.5c5.8-1.4 10.6-3.1 14.8-4.1 3.1-.8 4 1 3.2 3C78 61.5 65.3 84 44 94.6M57 58.8c5.6 4.7 19 19 27.3 26q3.9 3.5 8.5 6',
             comp: [
               {
-                c: '⼇',
-                na: ['なべぶた', 'けいさん', 'けいさんかんむり'],
-                m: ['lid'],
-                m_lang: 'en',
-              },
-              {
-                c: '⼜',
-                na: ['また'],
-                m: ['or again', 'furthermore', 'on the other hand'],
-                m_lang: 'en',
-              },
-              {
-                c: '⼡',
-                na: ['ふゆがしら', 'のまたかんむり', 'のまた', 'ちかんむり'],
-                m: ['winter'],
-                m_lang: 'en',
-              },
-              {
                 c: '⺘',
+                k: '手',
                 na: ['てへん'],
                 m: ['hand'],
                 m_lang: 'en',
+                base: {
+                  c: '⼿',
+                  k: '手',
+                  na: ['て'],
+                  m: ['hand'],
+                  m_lang: 'en',
+                },
+                is_rad: true,
+              },
+              {
+                c: '友',
+                na: ['とも'],
+                m: ['friend'],
+                m_lang: 'en',
+                sub: [
+                  {
+                    c: '⼜',
+                    k: '又',
+                    na: ['また'],
+                    m: ['or again', 'furthermore', 'on the other hand'],
+                    m_lang: 'en',
+                  },
+                ],
               },
             ],
             m_lang: 'en',
@@ -1017,7 +991,7 @@ describe('getFieldsToCopy', () => {
         }
       )
     ).toEqual(
-      '抜\tバツ、ハツ、ハイ、ぬ.く、ぬ.ける、ぬ.かす、ぬ.かる\tぬき\tslip out, extract\t⼇⼜⼡⺘\tClassic Nelson 1854\tConning 1951\tHenshall 1708\tJapanese for Busy People -\tJLPT 2\tKanji Kentei 4\t64 ⼿\t64 ⼿\tSKIP 1-3-4\tU+629C'
+      '抜\tバツ、ハツ、ハイ、ぬ.く、ぬ.ける、ぬ.かす、ぬ.かる\tぬき\tslip out, extract\t⺘友(⼜)\tClassic Nelson 1854\tConning 1951\tHenshall 1708\tJapanese for Busy People -\tJLPT 2\tKanji Kentei 4\t64 ⼿\t64 ⼿\tSKIP 1-3-4\tU+629C'
     );
   });
 });

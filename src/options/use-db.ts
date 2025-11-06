@@ -1,10 +1,11 @@
 import Bugsnag from '@birchill/bugsnag-zero';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import browser, { Runtime } from 'webextension-polyfill';
+import type { Runtime } from 'webextension-polyfill';
+import browser from 'webextension-polyfill';
 
-import { JpdictState } from '../background/jpdict';
+import type { JpdictState } from '../background/jpdict';
+import type { DbStateUpdatedMessage } from '../common/db-listener-messages';
 import {
-  DbStateUpdatedMessage,
   cancelDbUpdate,
   deleteDb,
   updateDb,
@@ -12,22 +13,10 @@ import {
 import { isObject } from '../utils/is-object';
 
 const initialDbstate: JpdictState = {
-  words: {
-    state: 'init',
-    version: null,
-  },
-  kanji: {
-    state: 'init',
-    version: null,
-  },
-  radicals: {
-    state: 'init',
-    version: null,
-  },
-  names: {
-    state: 'init',
-    version: null,
-  },
+  words: { state: 'init', version: null },
+  kanji: { state: 'init', version: null },
+  radicals: { state: 'init', version: null },
+  names: { state: 'init', version: null },
   updateState: { type: 'idle', lastCheck: null },
 };
 

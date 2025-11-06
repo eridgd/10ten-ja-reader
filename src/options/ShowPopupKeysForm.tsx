@@ -4,10 +4,7 @@ import { useLocale } from '../common/i18n';
 
 import { KeyBox, KeyCheckbox } from './KeyBox';
 
-export type HoldToShowSetting = {
-  alt: boolean;
-  ctrl: boolean;
-};
+export type HoldToShowSetting = { alt: boolean; ctrl: boolean; shift: boolean };
 
 type Props = {
   isMac: boolean;
@@ -22,7 +19,7 @@ export function ShowPopupKeysForm(props: Props) {
 
   return (
     <fieldset class="border border-solid border-zinc-300 px-6 py-3 dark:border-zinc-500">
-      <p class="my-3 italic leading-6">{t('options_show_popup_explanation')}</p>
+      <p class="my-3 leading-6 italic">{t('options_show_popup_explanation')}</p>
       <div class="grid auto-cols-max items-center gap-x-8">
         <div class="col-span-2">{t('options_show_popup_text_subheading')}</div>
         <KeyCheckboxes
@@ -68,10 +65,12 @@ type KeyCheckboxesProps = {
 function KeyCheckboxes(props: KeyCheckboxesProps) {
   const altRef = useRef<HTMLInputElement>(null);
   const ctrlRef = useRef<HTMLInputElement>(null);
+  const shiftRef = useRef<HTMLInputElement>(null);
   const onChange = () => {
     props.onChange({
       alt: altRef.current?.checked ?? false,
       ctrl: ctrlRef.current?.checked ?? false,
+      shift: shiftRef.current?.checked ?? false,
     });
   };
 
@@ -85,6 +84,22 @@ function KeyCheckboxes(props: KeyCheckboxesProps) {
       </span>
       <KeyCheckbox checked={props.value.ctrl} onClick={onChange} ref={ctrlRef}>
         <KeyBox label="Ctrl" isMac={props.isMac} />
+      </KeyCheckbox>
+      <span
+        class={
+          !props.value.shift || (!props.value.alt && !props.value.ctrl)
+            ? 'opacity-50'
+            : ''
+        }
+      >
+        +
+      </span>
+      <KeyCheckbox
+        checked={props.value.shift}
+        onClick={onChange}
+        ref={shiftRef}
+      >
+        <KeyBox label="Shift" isMac={props.isMac} />
       </KeyCheckbox>
     </div>
   );

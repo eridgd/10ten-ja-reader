@@ -1,9 +1,9 @@
 import { useMemo } from 'preact/hooks';
 
-import { ContentConfigParams } from '../../../common/content-config-params';
+import type { ContentConfigParams } from '../../../common/content-config-params';
 import { classes } from '../../../utils/classes';
 
-import { SelectionMeta } from '../../meta';
+import type { SelectionMeta } from '../../meta';
 
 import { CurrencyInfo } from './CurrencyInfo';
 import { EraInfoComponent } from './EraInfoComponent';
@@ -52,8 +52,8 @@ export function MetadataContainer({
   return metadata ? (
     <div
       class={classes(
-        'tp-my-2 tp-py-1 tp-px-4 tp-snap-start tp-scroll-mt-5',
-        metaonly ? 'tp-bg-transparent' : 'tp-bg-[--meta-bg]'
+        'tp:my-2 tp:py-1 tp:px-4 tp:snap-start tp:scroll-mt-5',
+        metaonly ? 'tp:bg-transparent' : 'tp:bg-(--meta-bg)'
       )}
     >
       {metadata}

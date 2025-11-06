@@ -1,8 +1,11 @@
-import { Tabs } from 'webextension-polyfill';
+import type { Tabs } from 'webextension-polyfill';
 
-import { ContentConfigParams } from '../common/content-config-params';
+import type { ContentConfigParams } from '../common/content-config-params';
 
-import { IndividualFrameMessage, TopFrameMessage } from './background-message';
+import type {
+  IndividualFrameMessage,
+  TopFrameMessage,
+} from './background-message';
 
 export interface TabManager {
   init(config: ContentConfigParams): Promise<void>;
@@ -35,7 +38,4 @@ export type EnabledChangedCallback = (params: {
   anyEnabled: boolean;
 }) => void;
 
-export type EnabledState = {
-  enabled: boolean;
-  tabId: number | undefined;
-};
+export type EnabledState = { enabled: boolean; tabId: number | undefined };

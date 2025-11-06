@@ -1,12 +1,12 @@
 import { kanaToHiragana } from '@birchill/normal-jp';
 import * as fs from 'node:fs';
 import * as https from 'node:https';
-import {
+import type {
   Readable,
-  Transform,
   TransformCallback,
   TransformOptions,
 } from 'node:stream';
+import { Transform } from 'node:stream';
 import * as url from 'node:url';
 import { createBrotliDecompress } from 'node:zlib';
 
@@ -151,10 +151,7 @@ async function getCurrentVersionInfo(
 //
 // ---------------------------------------------------------------------------
 
-type JsonRecord = {
-  id: number;
-  deleted?: boolean;
-};
+type JsonRecord = { id: number; deleted?: boolean };
 
 async function readJsonRecords(currentVersion: {
   major: number;

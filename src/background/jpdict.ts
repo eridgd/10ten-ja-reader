@@ -1,60 +1,48 @@
 import Bugsnag from '@birchill/bugsnag-zero';
-import {
+import type {
   DataSeries,
   DataSeriesState,
   DataVersion,
   UpdateErrorState,
   UpdateState,
-  getKanji,
-  getWords as idbGetWords,
 } from '@birchill/jpdict-idb';
+import { getKanji, getWords as idbGetWords } from '@birchill/jpdict-idb';
 import { kanaToHiragana } from '@birchill/normal-jp';
 import browser from 'webextension-polyfill';
 
-import { normalizeInput } from '../utils/normalize-input';
+import { normalizeInput } from '../utils/normalize';
 import { JpdictWorkerBackend } from '../worker/jpdict-worker-backend';
 
-import { FlatFileDatabaseLoadState, FlatFileDatabaseLoader } from './flat-file';
-import { JpdictBackend, JpdictLocalBackend } from './jpdict-backend';
-import { JpdictEvent } from './jpdict-events';
+import type { FlatFileDatabaseLoadState } from './flat-file';
+import { FlatFileDatabaseLoader } from './flat-file';
+import type { JpdictBackend } from './jpdict-backend';
+import { JpdictLocalBackend } from './jpdict-backend';
+import type { JpdictEvent } from './jpdict-events';
 import { nameSearch } from './name-search';
-import {
+import type {
   KanjiSearchResult,
   NameSearchResult,
   TranslateResult,
   WordSearchResult,
 } from './search-result';
-import { GetWordsFunction, wordSearch } from './word-search';
+import type { GetWordsFunction } from './word-search';
+import { wordSearch } from './word-search';
 
 //
 // Exported types
 //
 
 export type JpdictState = {
-  words: {
-    state: DataSeriesState;
-    version: DataVersion | null;
-  };
-  kanji: {
-    state: DataSeriesState;
-    version: DataVersion | null;
-  };
-  radicals: {
-    state: DataSeriesState;
-    version: DataVersion | null;
-  };
-  names: {
-    state: DataSeriesState;
-    version: DataVersion | null;
-  };
+  words: { state: DataSeriesState; version: DataVersion | null };
+  kanji: { state: DataSeriesState; version: DataVersion | null };
+  radicals: { state: DataSeriesState; version: DataVersion | null };
+  names: { state: DataSeriesState; version: DataVersion | null };
   updateState: UpdateState;
   updateError?: UpdateErrorState;
 };
 
 export type JpdictStateWithFallback = Omit<JpdictState, 'words'> & {
-  words: JpdictState['words'] & {
-    fallbackState: FlatFileDatabaseLoadState;
-  };
+  words: JpdictState['words'] & { fallbackState: FlatFileDatabaseLoadState };
 };
 
 //
@@ -76,23 +64,10 @@ const backend: JpdictBackend =
 // when it is being updated since this can block for several seconds.
 
 let dbState: JpdictStateWithFallback = {
-  words: {
-    state: 'init',
-    version: null,
-    fallbackState: 'unloaded',
-  },
-  kanji: {
-    state: 'init',
-    version: null,
-  },
-  radicals: {
-    state: 'init',
-    version: null,
-  },
-  names: {
-    state: 'init',
-    version: null,
-  },
+  words: { state: 'init', version: null, fallbackState: 'unloaded' },
+  kanji: { state: 'init', version: null },
+  radicals: { state: 'init', version: null },
+  names: { state: 'init', version: null },
   updateState: { type: 'idle', lastCheck: null },
 };
 
@@ -275,9 +250,7 @@ async function setLastUpdateTime(time: number | null) {
   // Extension storage can randomly fail with "An unexpected error occurred".
   try {
     if (time) {
-      await browser.storage.local.set({
-        lastDbUpdateTime: time,
-      });
+      await browser.storage.local.set({ lastDbUpdateTime: time });
     } else {
       await browser.storage.local.remove('lastDbUpdateTime');
     }
@@ -386,10 +359,11 @@ export async function translate({
     more: false,
   };
 
-  let skip: number;
-  while (text.length > 0) {
+  let offset = 0;
+
+  while (offset < text.length) {
     const [searchResult, dbStatus] = await searchWords({
-      input: text,
+      input: text.slice(offset),
       max: 1,
       includeRomaji,
     });
@@ -400,25 +374,24 @@ export async function translate({
         break;
       }
 
-      // Just take first match
-      result.data.push(searchResult.data[0]);
-      skip = searchResult.matchLen;
+      // Just take the first match
+      result.data.push({ ...searchResult.data[0], sourceOffset: offset });
+
+      offset += searchResult.matchLen;
     } else {
-      skip = 1;
+      offset++;
     }
 
     if (searchResult && dbStatus) {
       result.dbStatus = dbStatus;
     }
-
-    text = text.substring(skip);
   }
 
   if (result.data.length === 0) {
     return null;
   }
 
-  result.textLen -= text.length;
+  result.textLen = offset;
   return result;
 }
 

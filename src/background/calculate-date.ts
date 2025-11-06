@@ -1,5 +1,6 @@
-import { EraInfoDate, EraInfoTimeSpan } from '../content/dates';
-import { DateArray, eraInfo } from '../utils/era-info';
+import type { EraInfoDate, EraInfoTimeSpan } from '../content/dates';
+import type { DateArray } from '../utils/era-info';
+import { eraInfo } from '../utils/era-info';
 
 export function calculateEraDateTimeSpan({
   era,
@@ -130,8 +131,5 @@ function calculateTimeSpanOfEraYearOrMonth(
   const earlierEndDate =
     endOfEraDate < endOfTimeSpan ? endOfEraDate : endOfTimeSpan;
 
-  return {
-    dateStart: laterStartDate,
-    dateEnd: earlierEndDate,
-  };
+  return { dateStart: laterStartDate, dateEnd: earlierEndDate };
 }

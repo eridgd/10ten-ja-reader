@@ -3,7 +3,7 @@ import { useLayoutEffect } from 'preact/hooks';
 import { useFixtureInput, useFixtureSelect } from 'react-cosmos/client';
 
 import { I18nProvider } from '../../common/i18n';
-import { EmptyProps } from '../../utils/type-helpers';
+import type { EmptyProps } from '../../utils/type-helpers';
 
 import { PopupOptionsProvider } from './options-context';
 
@@ -41,12 +41,10 @@ export default function PopupDecorator({
 
   return (
     <I18nProvider locale={locale}>
-      <PopupOptionsProvider interactive={interactive}>
+      <PopupOptionsProvider interactive={interactive} fontSize={fontSize}>
         <div
           className={`theme-${themeName} window bundled-fonts`}
-          style={{
-            '--base-font-size': `var(--${fontSize}-font-size)`,
-          }}
+          style={{ '--base-font-size': `var(--${fontSize}-font-size)` }}
         >
           {children}
         </div>

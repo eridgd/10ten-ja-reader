@@ -1,30 +1,37 @@
-import { Point, bboxIncludesPoint } from '../utils/geometry';
+import type { Point } from '../utils/geometry';
+import { bboxIncludesPoint } from '../utils/geometry';
 import {
   getBboxForSingleCodepointRange,
   getRangeForSingleCodepoint,
 } from '../utils/range';
+import type { Overwrite } from '../utils/type-helpers';
 
 import { getContentType } from './content-type';
-import { getTextFromAnnotatedCanvas } from './gdocs-canvas';
 import {
-  CursorPosition,
+  MAX_SOURCE_CONTEXT_POSTLUDE_LENGTH,
+  MAX_SOURCE_CONTEXT_PRELUDE_LENGTH,
+} from './flashcards/source-context';
+import { getTextFromAnnotatedCanvas } from './gdocs-canvas';
+import type { CursorPosition } from './get-cursor-position';
+import {
   getCursorPosition,
   isGdocsOverlayPosition,
   isTextInputPosition,
   isTextNodePosition,
 } from './get-cursor-position';
-import { SelectionMeta } from './meta';
-import { scanText } from './scan-text';
-import { TextRange } from './text-range';
+import { type ScanTextResult, scanText } from './scan-text';
+import type { TextRange } from './text-range';
 
-export type GetTextAtPointResult = {
-  text: string;
-  // Contains the set of nodes and their ranges where text was found.
-  // This will be null if, for example, the result is the text from an element's
-  // title attribute.
-  textRange: TextRange | null;
-  // Extra metadata we parsed in the process
-  meta?: SelectionMeta;
+export type GetTextAtPointResult = Overwrite<
+  ScanTextResult,
+  {
+    // This will be null if, for example, the result is the text from an element's
+    // title attribute.
+    textRange: TextRange | null;
+  }
+> & {
+  // The element where the text began
+  startElement: Element;
 };
 
 // Cache of previous result (since often the mouse position will change but
@@ -83,30 +90,31 @@ export function getTextAtPoint({
   }
 
   const synthesizedPosition = position
-    ? {
-        offsetNode: scanNode || position.offsetNode,
-        offset: position.offset,
-      }
+    ? { offsetNode: scanNode || position.offsetNode, offset: position.offset }
     : undefined;
 
   if (position && isTextNodePosition(synthesizedPosition)) {
-    const result = scanText({
+    const scanResult = scanText({
       startPosition: synthesizedPosition,
       matchCurrency,
       maxLength,
     });
 
-    if (result) {
+    if (scanResult) {
       console.assert(
-        !!result.textRange,
-        'There should be a text range when getting text from a text node'
+        position.offsetNode.parentElement,
+        'Nodes in our position should have a parent element'
       );
+      const result: GetTextAtPointResult = {
+        ...scanResult,
+        startElement: position.offsetNode.parentElement!,
+      };
 
       // If we synthesized a text node, substitute the original node into the
       // result.
       if (position.offsetNode !== synthesizedPosition.offsetNode) {
         console.assert(
-          result.textRange?.length === 1,
+          result.textRange!.length === 1,
           'When using a synthesized text node there should be a single range'
         );
         console.assert(
@@ -123,6 +131,7 @@ export function getTextAtPoint({
         result,
         firstCharBbox: getFirstCharBbox(position),
       };
+
       return result;
     }
   }
@@ -132,7 +141,12 @@ export function getTextAtPoint({
   if (elem) {
     const text = getTextFromRandomElement({ elem, matchImages, matchText });
     if (text) {
-      const result = { text, textRange: null };
+      const result = {
+        text,
+        textRange: null,
+        startElement: elem,
+        sourceContext: null,
+      };
       previousResult = { point, position: undefined, result };
       return result;
     }
@@ -183,7 +197,7 @@ function getTextNodeStart({
   maxLength,
   point,
 }: {
-  elements: readonly Element[];
+  elements: ReadonlyArray<Element>;
   maxLength?: number;
   point: Point;
 }): [position: CursorPosition, scanNode: Text | null] | [null, null] {
@@ -202,13 +216,30 @@ function getTextNodeStart({
 
   // Similarly, if we have a Google Docs node, synthesize a node to scan.
   if (isGdocsOverlayPosition(position)) {
-    let text = '';
-    ({ position, text } = getTextFromAnnotatedCanvas({
-      maxLength,
+    let maxGdocsLength = MAX_SOURCE_CONTEXT_POSTLUDE_LENGTH;
+    if (maxLength) {
+      maxGdocsLength += maxLength;
+    }
+    let text;
+    let prelude;
+    ({ position, text, prelude } = getTextFromAnnotatedCanvas({
+      maxLength: maxGdocsLength,
+      maxPreludeLength: MAX_SOURCE_CONTEXT_PRELUDE_LENGTH,
       point,
     }));
 
-    return position ? [position, document.createTextNode(text)] : [null, null];
+    if (!position || !text.length) {
+      return [null, null];
+    }
+
+    const scanNode = document.createTextNode(text);
+    if (prelude.length) {
+      const container = document.createElement('span');
+      container.appendChild(document.createTextNode(prelude));
+      container.appendChild(scanNode);
+    }
+
+    return [position, scanNode];
   }
 
   return [position, null];

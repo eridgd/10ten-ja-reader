@@ -72,11 +72,8 @@ const commonConfig = {
           loader: 'builtin:swc-loader',
           /** @type {import('@rspack/core').SwcLoaderOptions} */
           options: {
-            sourceMap: true,
-            jsc: {
-              parser: { syntax: 'typescript' },
-              target: 'es2020',
-            },
+            sourceMaps: true,
+            jsc: { parser: { syntax: 'typescript' }, target: 'es2020' },
           },
         },
         type: 'javascript/auto',
@@ -88,12 +85,9 @@ const commonConfig = {
           loader: 'builtin:swc-loader',
           /** @type {import('@rspack/core').SwcLoaderOptions} */
           options: {
-            sourceMap: true,
+            sourceMaps: true,
             jsc: {
-              parser: {
-                syntax: 'typescript',
-                tsx: true,
-              },
+              parser: { syntax: 'typescript', tsx: true },
               transform: {
                 react: {
                   runtime: 'automatic',
@@ -127,13 +121,8 @@ const commonConfig = {
 const testConfig = {
   ...commonConfig,
   name: 'tests',
-  entry: {
-    'content-loader': './tests/content-loader.ts',
-  },
-  output: {
-    path: path.resolve(__dirname, 'tests'),
-    filename: '[name].js',
-  },
+  entry: { 'content-loader': './tests/content-loader.ts' },
+  output: { path: path.resolve(__dirname, 'tests'), filename: '[name].js' },
   plugins: [
     new rspack.DefinePlugin({
       __ACTIVE_TAB_ONLY__: false,
@@ -167,6 +156,7 @@ export default (env) => {
         optionsInTab: true,
         supportsExtensionSourceMaps: false,
         supportsMatchAboutBlank: true,
+        supportsMatchOriginAsFallback: true,
         supportsOfflineEnabledField: true,
         target: 'chromium',
         useServiceWorker: true,
@@ -184,6 +174,7 @@ export default (env) => {
         optionsInTab: true,
         supportsExtensionSourceMaps: false,
         supportsMatchAboutBlank: true,
+        supportsMatchOriginAsFallback: true,
         supportsOfflineEnabledField: true,
         target: 'chromium',
         useServiceWorker: false,
@@ -201,6 +192,8 @@ export default (env) => {
         optionsInTab: true,
         supportsExtensionSourceMaps: false,
         supportsMatchAboutBlank: true,
+        // It seems like Edge's validator doesn't recognize
+        // `match_origin_as_fallback` so we don't mark it as true here
         target: 'chromium',
         useServiceWorker: true,
       })
@@ -217,6 +210,11 @@ export default (env) => {
         supportsBrowserSpecificSettings: true,
         supportsBrowserStyle: true,
         supportsExtensionSourceMaps: false,
+        // As of Safari 18.4, Safari supports `match_about_blank` and
+        // `match_origin_as_fallback`[1] but we don't enable it until
+        // Safari 18.4 has been sufficiently widely deployed.
+        //
+        // [1] https://webkit.org/blog/16574/webkit-features-in-safari-18-4/#expanded-subframe-injection
         useEventPage: true,
       })
     );
@@ -241,10 +239,14 @@ export default (env) => {
         artifactsDir: 'dist-firefox-package',
         distFolder: 'dist-firefox',
         includeRikaichampName: true,
+        // When we decide to set `mv3` to true, we should probably bump the
+        // minimum Gecko version to 128 due to bug 1771328
+        // (https://bugzilla.mozilla.org/show_bug.cgi?id=1771328).
         supportsAlphaVersion: true,
         supportsBrowserSpecificSettings: true,
         supportsBrowserStyle: true,
         supportsMatchAboutBlank: true,
+        supportsMatchOriginAsFallback: true,
         supportsSvgIcons: true,
         supportsTabContextType: true,
         target: 'firefox',
@@ -275,7 +277,10 @@ export default (env) => {
  * @property {boolean} [supportsBrowserSpecificSettings]
  * @property {boolean} [supportsBrowserStyle]
  * @property {boolean} [supportsExtensionSourceMaps]
- * @property {boolean} [supportsMatchAboutBlank]
+ * @property {boolean} [supportsMatchAboutBlank] - Whether the target supports
+ * the `match_about_blank` property.
+ * @property {boolean} [supportsMatchOriginAsFallback] - Whether the target
+ * supports the `match_origin_as_fallback` property.
  * @property {boolean} [supportsOfflineEnabledField]
  * @property {boolean} [supportsSvgIcons]
  * @property {boolean} [supportsTabContextType]
@@ -348,6 +353,10 @@ function getExtConfig(options) {
     preprocessorFeatures.push('supports_match_about_blank');
   }
 
+  if (options.supportsMatchOriginAsFallback) {
+    preprocessorFeatures.push('supports_match_origin_as_fallback');
+  }
+
   if (options.supportsOfflineEnabledField) {
     preprocessorFeatures.push('supports_offline_enabled_field');
   }
@@ -415,11 +424,6 @@ function getExtConfig(options) {
     'data/*',
     'fonts/*',
     '_locales/**/*',
-    // Update page assets
-    { from: 'docs/update/update.css', to: 'docs' },
-    { from: '*.html', context: 'docs/update', to: 'docs' },
-    { from: '*.png', context: 'docs/update/img', to: 'docs/img' },
-    { from: '*.js', context: 'docs/update', to: 'docs' },
   ];
 
   plugins.push(new rspack.CopyRspackPlugin({ patterns: copyPatterns }));
@@ -475,6 +479,7 @@ function getExtConfig(options) {
         {
           apiKey: process.env.BUGSNAG_API_KEY,
           appVersion: pjson.version,
+          logLevel: 'debug',
         },
         {}
       )
@@ -486,6 +491,7 @@ function getExtConfig(options) {
           appVersion: pjson.version,
           ignoredBundleExtensions: ['.css', '.json', '.idx', '.svg', '.html'],
           publicPath: `https://github.com/birchill/10ten-ja-reader/releases/download/v${pjson.version}/`,
+          logLevel: 'debug',
           overwrite: true,
         },
         {}
@@ -552,9 +558,7 @@ function getExtConfig(options) {
       // options page.
       popup: './src/content/popup/popup.css',
     },
-    experiments: {
-      css: true,
-    },
+    experiments: { css: true },
     // We turn on production mode simply so we can drop unused code from the
     // bundle -- otherwise we'll end up injecting a bunch of unrelated code like
     // Russian token stopwords into the content script.
@@ -584,10 +588,7 @@ function getExtConfig(options) {
         // 'beautify' so it will produce different output.
         new TerserPlugin({
           terserOptions: {
-            compress: {
-              defaults: false,
-              unused: true,
-            },
+            compress: { defaults: false, unused: true },
             mangle: false,
             format: {
               // Chrome sometimes doesn't like the generated output claiming it's
@@ -618,12 +619,7 @@ function getPreprocessorConfig(...features) {
   return {
     test: /\.src$/,
     use: [
-      {
-        loader: 'file-loader',
-        options: {
-          name: '[name]',
-        },
-      },
+      { loader: 'file-loader', options: { name: '[name]' } },
       {
         loader:
           'webpack-preprocessor?' +

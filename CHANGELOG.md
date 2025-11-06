@@ -8,6 +8,54 @@ app.
 
 ## [Unreleased]
 
+- Added references for
+  [The Kodansha Kanji Dictionary](https://www.kanji.org/dictionaries/KKD/kaneirev.htm).
+- Improved scanning of ruby transcription text.
+- Added vertical reading mode to puck, allowing puck earth to orbit on the sides
+  rather than just the top or bottom
+  ([#2557](https://github.com/birchill/10ten-ja-reader/pull/2557)).
+- Revert changes from [PR #1773](https://github.com/birchill/10ten-ja-reader/pull/1773).
+  Puck can hold popup open again ([#2564](https://github.com/birchill/10ten-ja-reader/pull/2564)).
+- Made popup work for Notion popups like the calendar
+  ([#2530](https://github.com/birchill/10ten-ja-reader/issues/2530)).
+- Fixed handling of multi-line text areas in Chrome/Edge due to
+  [Chromium bug](https://issues.chromium.org/issues/446475645)
+  ([#2541](https://github.com/birchill/10ten-ja-reader/issues/2541)).
+- Fixed showing of title field when looking up `alt` and `title` attributes.
+
+## [1.25.1] - 2025-07-22
+
+- (Safari) Fixed random jumps in the words list
+  ([#2457](https://github.com/birchill/10ten-ja-reader/issues/2457)).
+
+## [1.25.0] - 2025-07-04
+
+- Added support for looking up subtitles in Plex video content
+  ([#976](https://github.com/birchill/10ten-ja-reader/pull/976)).
+- Added Shift as a possible keybinding for hold to show
+  ([#2409](https://github.com/birchill/10ten-ja-reader/pull/2409)).
+- Fixed a bug when displaying Nelson radicals
+  ([#2315](https://github.com/birchill/10ten-ja-reader/pull/2315)).
+- Fixed a bug that prevented the flash animation after copying an entry from playing
+  ([#2415](https://github.com/birchill/10ten-ja-reader/pull/2415)).
+- Fixed a bug where changing the font size in the settings wouldn't apply to the `Kanji` and `Names` tabs
+  ([#2418](https://github.com/birchill/10ten-ja-reader/pull/2418)).
+
+## [1.24.2] - 2025-04-03
+
+- (Edge) Fix manifest to exclude `match_origin_as_fallback` property (this time
+  for sure).
+
+## [1.24.1] - 2025-04-03
+
+- (Edge) Fix manifest to exclude `match_origin_as_fallback` property.
+
+## [1.24.0] - 2025-04-03
+
+- Fixed the popup getting stuck to the top-left in Facebook
+  ([#2303](https://github.com/birchill/10ten-ja-reader/pull/2303)).
+- Switched kanji data to new schema so we can show subcomponents.
+
 ## [1.23.0] - 2025-01-23
 
 - Added precise conversion of Japanese era dates, including those preceding
@@ -758,7 +806,6 @@ app.
 ## [0.4.0] - 2021-04-08
 
 - Switched to using IndexedDB database for looking up words
-
   - **Non-English definitions are now supported**
   - Rikaichamp now uses much less memory
   - All dictionaries are automatically updated weekly by downloading
@@ -1243,7 +1290,12 @@ app.
 
 - Initial version (yes, it took me four attempts to publish).
 
-[unreleased]: https://github.com/birchill/10ten-ja-reader/compare/v1.23.0...HEAD
+[unreleased]: https://github.com/birchill/10ten-ja-reader/compare/v1.25.1...HEAD
+[1.25.1]: https://github.com/birchill/10ten-ja-reader/compare/v1.25.0...v1.25.1
+[1.25.0]: https://github.com/birchill/10ten-ja-reader/compare/v1.24.2...v1.25.0
+[1.24.2]: https://github.com/birchill/10ten-ja-reader/compare/v1.24.1...v1.24.2
+[1.24.1]: https://github.com/birchill/10ten-ja-reader/compare/v1.24.0...v1.24.1
+[1.24.0]: https://github.com/birchill/10ten-ja-reader/compare/v1.23.0...v1.24.0
 [1.23.0]: https://github.com/birchill/10ten-ja-reader/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/birchill/10ten-ja-reader/compare/v1.21.1...v1.22.0
 [1.21.1]: https://github.com/birchill/10ten-ja-reader/compare/v1.21.0...v1.21.1

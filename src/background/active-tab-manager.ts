@@ -1,13 +1,17 @@
 /// <reference path="../common/constants.d.ts" />
 import Bugsnag from '@birchill/bugsnag-zero';
 import * as s from 'superstruct';
-import browser, { Runtime, Tabs } from 'webextension-polyfill';
+import type { Runtime, Tabs } from 'webextension-polyfill';
+import browser from 'webextension-polyfill';
 
-import { ContentConfigParams } from '../common/content-config-params';
+import type { ContentConfigParams } from '../common/content-config-params';
 
-import { IndividualFrameMessage, TopFrameMessage } from './background-message';
+import type {
+  IndividualFrameMessage,
+  TopFrameMessage,
+} from './background-message';
 import { BackgroundRequestSchema } from './background-request';
-import {
+import type {
   EnabledChangedCallback,
   EnabledState,
   TabManager,
@@ -185,11 +189,7 @@ export default class ActiveTabManager implements TabManager {
     // enabledTabs at that point.
     const isRootFrame = typeof frameId === 'undefined' || frameId === 0;
     if (isRootFrame && !(tabId in this.enabledTabs)) {
-      this.enabledTabs[tabId] = {
-        frames: [],
-        port: undefined,
-        src: '',
-      };
+      this.enabledTabs[tabId] = { frames: [], port: undefined, src: '' };
     }
 
     // If we are dealing with a single frame, try calling to see if the content
@@ -330,12 +330,7 @@ export default class ActiveTabManager implements TabManager {
     // Now send the enable message.
     await browser.tabs.sendMessage(
       tabId,
-      {
-        type: 'enable',
-        config: this.config,
-        id: tabId,
-        frame: '*',
-      },
+      { type: 'enable', config: this.config, id: tabId, frame: '*' },
       { frameId }
     );
   }

@@ -1,10 +1,11 @@
-import { NameTranslation } from '@birchill/jpdict-idb';
+import type { NameTranslation } from '@birchill/jpdict-idb';
 
-import { NameResult } from '../../../background/search-result';
+import type { NameResult } from '../../../background/search-result';
 import { useLocale } from '../../../common/i18n';
 import { getDob } from '../../../utils/age';
 import { classes } from '../../../utils/classes';
 
+import { Tag } from '../Tag';
 import { usePopupOptions } from '../options-context';
 
 type SelectState = 'unselected' | 'selected' | 'flash';
@@ -24,44 +25,42 @@ export function NameEntry(props: Props) {
   return (
     <div
       class={classes(
-        'tp-group tp-flex tp-flex-col tp-px-4 tp-py-1.5 tp-break-inside-avoid',
+        'tp:group tp:flex tp:flex-col tp:px-4 tp:py-1.5 tp:break-inside-avoid',
         // See comment in KanjiEntry.tsx about the future plans for these
         // CSS classes.
         props.selectState === 'selected' && '-selected',
         props.selectState === 'flash' && '-flash',
         // Ensure any selection colors are applied before fading in the
         // overlay
-        props.selectState === 'selected' &&
-          'no-overlay:tp-text-[--selected-highlight] no-overlay:tp-bg-[--selected-bg]',
+        'tp:no-overlay:data-selected:text-(--selected-highlight)',
+        'tp:no-overlay:data-selected:bg-(--selected-bg)',
         // Run the flash animation, but not until the overlay has
         // disappeared.
-        props.selectState === 'flash' && 'no-overlay:tp-animate-flash',
+        'tp:no-overlay:data-flash:animate-flash',
         ...(interactive
           ? [
-              'hh:hover:tp-bg-[--hover-bg]',
-              'hh:hover:tp-cursor-pointer',
+              'tp:hover:bg-(--hover-bg)',
+              'tp:hover:cursor-pointer',
               // Fade _out_ the color change
-              'hh:tp-transition-colors hh:interactive:tp-duration-100',
-              'hh:tp-ease-out',
-              'hh:hover:tp-transition-none',
+              'tp:transition-colors tp:interactive:duration-100',
+              'tp:ease-out',
+              'tp:hover:transition-none',
             ]
           : [])
       )}
+      data-selected={props.selectState === 'selected' || undefined}
+      data-flash={props.selectState === 'flash' || undefined}
       onPointerUp={props.onPointerUp}
       onClick={props.onClick}
     >
-      <div class="tp-space-x-4" lang="ja">
-        {props.entry.k?.length && (
-          <KanjiEntries k={props.entry.k} selectState={props.selectState} />
-        )}
+      <div class="tp:space-x-4" lang="ja">
+        {props.entry.k?.length && <KanjiEntries k={props.entry.k} />}
         <span
           class={classes(
-            'tp-text-xl',
-            props.selectState === 'selected'
-              ? 'no-overlay:tp-text-[--selected-reading-highlight]'
-              : 'tp-text-[--reading-highlight]',
-            interactive &&
-              'hh:group-hover:tp-text-[--selected-reading-highlight]'
+            'tp:text-xl',
+            'tp:text-(--reading-highlight)',
+            'tp:no-overlay:group-data-selected:text-(--selected-reading-highlight)',
+            interactive && 'tp:group-hover:text-(--selected-reading-highlight)'
           )}
         >
           {kana}
@@ -69,24 +68,14 @@ export function NameEntry(props: Props) {
       </div>
       <div>
         {props.entry.tr.map((tr) => (
-          <NameTranslationComponent
-            key={tr.det.join()}
-            translation={tr}
-            selectState={props.selectState}
-          />
+          <NameTranslationComponent key={tr.det.join()} translation={tr} />
         ))}
       </div>
     </div>
   );
 }
 
-function KanjiEntries({
-  k,
-  selectState,
-}: {
-  k: string[];
-  selectState: SelectState;
-}) {
+function KanjiEntries({ k }: { k: Array<string> }) {
   const { interactive } = usePopupOptions();
 
   const MAX_KANJI = 15;
@@ -100,11 +89,10 @@ function KanjiEntries({
   return (
     <span
       class={classes(
-        'tp-text-1.5xl',
-        selectState === 'selected'
-          ? 'no-overlay:tp-text-[--selected-highlight]'
-          : 'tp-text-[--primary-highlight]',
-        interactive && 'hh:group-hover:tp-text-[--selected-highlight]'
+        'tp:text-1.5xl',
+        'tp:text-(--primary-highlight)',
+        'tp:no-overlay:group-data-selected:text-(--selected-highlight)',
+        interactive && 'tp:group-hover:text-(--selected-highlight)'
       )}
     >
       {kanji}
@@ -114,16 +102,13 @@ function KanjiEntries({
 
 function NameTranslationComponent({
   translation,
-  selectState,
 }: {
   translation: NameTranslation;
-  selectState: SelectState;
 }) {
+  const { t, langTag } = useLocale();
   const { interactive } = usePopupOptions();
 
   function annotateAge(text: string): string {
-    const { t } = useLocale();
-
     const dob = getDob(text);
     if (!dob) {
       return text;
@@ -157,73 +142,23 @@ function NameTranslationComponent({
 
   return (
     // ENAMDICT only has English glosses
-    <div class="tp-text-base tp-space-x-1.5" lang="en">
+    <div class="tp:text-base tp:space-x-1.5" lang="en">
       <span
         class={classes(
-          selectState === 'selected' &&
-            'no-overlay:tp-text-[--selected-def-color]',
-          interactive && 'hh:group-hover:tp-text-[--selected-def-color]'
+          'tp:no-overlay:group-data-selected:text-(--selected-def-color)',
+          interactive && 'tp:group-hover:text-(--selected-def-color)'
         )}
       >
         {translation.det.map(annotateDetailFn).join(', ')}
       </span>
       {translation.type?.map((tag) => (
-        <Tag tag={tag} selectState={selectState} key={tag} />
+        <Tag
+          tagType={tag}
+          text={t(`content_names_tag_${tag}`)}
+          langTag={langTag}
+          key={tag}
+        />
       ))}
     </div>
   );
-}
-
-function Tag({
-  tag,
-  selectState,
-}: {
-  tag: string;
-  selectState: 'unselected' | 'selected' | 'flash';
-}) {
-  const { t, langTag } = useLocale();
-  const { interactive } = usePopupOptions();
-
-  const tagText = t(`content_names_tag_${tag}`);
-
-  const tagColors: Record<string, string> = {
-    fem: 'pink',
-    masc: 'blue',
-    place: 'green',
-  };
-  const tagColor = tagColors[tag];
-
-  return tagText ? (
-    <span
-      class={classes(
-        'tp-text-2xs tp-px-1 tp-whitespace-nowrap',
-        'tp-rounded tp-border-solid tp-border',
-        'tp-bg-[var(--color-tag-bg,transparent)]',
-        ...(selectState === 'selected'
-          ? [
-              'no-overlay:tp-border-[var(--selected-tag-border)]',
-              'no-overlay:tp-text-[var(--selected-tag-color)]',
-            ]
-          : [
-              'tp-border-[var(--color-tag-border,var(--tag-border))]',
-              'tp-text-[var(--color-tag-text-color,var(--text-color))]',
-            ]),
-        interactive &&
-          classes(
-            'hh:group-hover:tp-border-[--selected-tag-border]',
-            'hh:group-hover:tp-text-[--selected-tag-color]'
-          )
-      )}
-      style={
-        tagColor && {
-          '--color-tag-bg': `var(--tag-${tagColor}-bg)`,
-          '--color-tag-border': `var(--tag-${tagColor}-border)`,
-          '--color-tag-text-color': `var(--tag-${tagColor}-text)`,
-        }
-      }
-      lang={langTag}
-    >
-      {tagText}
-    </span>
-  ) : null;
 }

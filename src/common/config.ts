@@ -12,9 +12,10 @@
 import Bugsnag from '@birchill/bugsnag-zero';
 import browser from 'webextension-polyfill';
 
-import { FxLocalData, getLocalFxData } from '../background/fx-data';
+import type { FxLocalData } from '../background/fx-data';
+import { getLocalFxData } from '../background/fx-data';
 import { isObject } from '../utils/is-object';
-import { stripFields } from '../utils/strip-fields';
+import { omit } from '../utils/omit';
 import { isSafari } from '../utils/ua-utils';
 
 import type {
@@ -28,15 +29,14 @@ import type {
   PartOfSpeechDisplay,
   TabDisplay,
 } from './content-config-params';
-import { DbLanguageId, dbLanguages } from './db-languages';
+import type { DbLanguageId } from './db-languages';
+import { dbLanguages } from './db-languages';
 import { ExtensionStorageError } from './extension-storage-error';
-import { PopupKeys, StoredKeyboardKeys } from './popup-keys';
-import { PuckState } from './puck-state';
-import {
-  ReferenceAbbreviation,
-  convertLegacyReference,
-  getReferencesForLang,
-} from './refs';
+import type { StoredKeyboardKeys } from './popup-keys';
+import { PopupKeys } from './popup-keys';
+import type { PuckState } from './puck-state';
+import type { ReferenceAbbreviation } from './refs';
+import { convertLegacyReference, getReferencesForLang } from './refs';
 
 // We represent the set of references that have been turned on as a series
 // of true or false values.
@@ -67,6 +67,7 @@ interface Settings {
   fontFace?: FontFace;
   fontSize?: FontSize;
   fxCurrency?: string;
+  handedness?: 'left' | 'right';
   highlightStyle?: HighlightStyle;
   holdToShowKeys?: string;
   holdToShowImageKeys?: string;
@@ -91,10 +92,7 @@ interface Settings {
   waniKaniVocabDisplay?: 'hide' | 'show-matches';
 }
 
-type StorageChange = {
-  oldValue?: any;
-  newValue?: any;
-};
+type StorageChange = { oldValue?: any; newValue?: any };
 type ChangeDict = { [field: string]: StorageChange };
 export type ChangeCallback = (changes: ChangeDict) => void;
 
@@ -103,6 +101,7 @@ export type ChangeCallback = (changes: ChangeDict) => void;
 // references.
 const OFF_BY_DEFAULT_REFERENCES: Set<ReferenceAbbreviation> = new Set([
   'busy_people',
+  'halpern_kkd',
   'kanji_in_context',
   'kodansha_compact',
   'maniette',
@@ -113,7 +112,7 @@ export class Config {
   private fxData: FxLocalData | undefined;
   private settings: Settings = {};
   private readyPromise: Promise<void>;
-  private changeListeners: ChangeCallback[] = [];
+  private changeListeners: Array<ChangeCallback> = [];
   private previousDefaultLang: DbLanguageId;
 
   constructor() {
@@ -166,9 +165,7 @@ export class Config {
 
       this.settings.kanjiReferencesV2 = newSettings;
       try {
-        await browser.storage.sync.set({
-          kanjiReferencesV2: newSettings,
-        });
+        await browser.storage.sync.set({ kanjiReferencesV2: newSettings });
       } catch {
         // If we failed to store the upgraded settings that's fine since at
         // least the in-memory version of the settings has been upgraded.
@@ -271,15 +268,21 @@ export class Config {
           delete updatedChanges.kanjiReferencesV2;
           break;
 
-        // In some cases, the pinPopup key is calculated from the holdToShowKeys
-        // value so we might need to report that too.
+        // In some cases, the pinPopup and kanjiLookup keys are calculated from
+        // the holdToShow(Image)Keys value so we might need to report that too.
         case 'holdToShowKeys':
+        case 'holdToShowImageKeys':
           // If...
           if (
             // We are already reporting a change to `keys`, or
             Object.keys(updatedChanges).includes('keys') ||
-            // The pinPopup key is already explicitly set
-            this.settings.keys?.pinPopup
+            // The pinPopup key is already explicitly set and
+            (this.settings.keys?.pinPopup &&
+              // The change doesn't involve the shift key
+              !(
+                updatedChanges[key].newValue?.includes('Shift') ||
+                updatedChanges[key].oldValue?.includes('Shift')
+              ))
           ) {
             // ... we don't need to report a change
             break;
@@ -793,6 +796,27 @@ export class Config {
       : undefined;
   }
 
+  // handedness: Defaults to 'unset'
+
+  get handedness(): 'unset' | 'left' | 'right' {
+    return this.settings.handedness ?? 'unset';
+  }
+
+  set handedness(value: 'unset' | 'left' | 'right') {
+    const storedSetting = this.settings.handedness ?? 'unset';
+    if (storedSetting === value) {
+      return;
+    }
+
+    if (value === 'unset') {
+      delete this.settings.handedness;
+      void browser.storage.sync.remove('handedness');
+    } else {
+      this.settings.handedness = value;
+      void browser.storage.sync.set({ handedness: value });
+    }
+  }
+
   // highlightStyle: Defaults to 'yellow'
 
   get highlightStyle(): HighlightStyle {
@@ -968,6 +992,15 @@ export class Config {
       }
     }
 
+    // If shift is activated as a hold to show key, we need to deactivate the
+    // shift key for kanji lookups.
+    if (
+      this.holdToShowKeys?.includes('Shift') ||
+      this.holdToShowImageKeys?.includes('Shift')
+    ) {
+      keys.kanjiLookup = keys.kanjiLookup.filter((key) => key !== 'Shift');
+    }
+
     // When we first released the `expandPopup` key ('x') we didn't notice
     // that it was already possible to assign 'x' to `closePopup`.
     //
@@ -1004,7 +1037,7 @@ export class Config {
       );
 
     return {
-      ...stripFields(storedKeys, ['movePopupDownOrUp']),
+      ...omit(storedKeys, 'movePopupDownOrUp'),
       movePopupDown: down,
       movePopupUp: up,
     };
@@ -1012,10 +1045,7 @@ export class Config {
 
   updateKeys(keys: Partial<StoredKeyboardKeys>) {
     const existingSettings = this.settings.keys || {};
-    this.settings.keys = {
-      ...existingSettings,
-      ...keys,
-    };
+    this.settings.keys = { ...existingSettings, ...keys };
 
     void browser.storage.sync.set({ keys: this.settings.keys });
   }
@@ -1346,6 +1376,7 @@ export class Config {
       fontFace: this.fontFace,
       fontSize: this.fontSize,
       highlightStyle: this.highlightStyle,
+      handedness: this.handedness,
       holdToShowKeys: this.holdToShowKeys
         ? (this.holdToShowKeys.split('+') as Array<'Ctrl' | 'Alt'>)
         : [],

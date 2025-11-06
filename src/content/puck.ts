@@ -1,9 +1,18 @@
 /// <reference path="../common/css.d.ts" />
+import browser from 'webextension-polyfill';
+
+import puckOnboardingStyles from '../../css/puck-onboarding.css?inline';
 import puckStyles from '../../css/puck.css?inline';
 
-import { PuckState } from '../common/puck-state';
+import type {
+  ContentConfigParams,
+  FontFace,
+  FontSize,
+} from '../common/content-config-params';
+import type { PuckState } from '../common/puck-state';
+import { debounce } from '../utils/debounce';
 import { SVG_NS } from '../utils/dom-utils';
-import { MarginBox } from '../utils/geometry';
+import type { MarginBox } from '../utils/geometry';
 import { getThemeClass } from '../utils/themes';
 import { isIOS } from '../utils/ua-utils';
 
@@ -12,17 +21,11 @@ import {
   removeContentContainer,
 } from './content-container';
 import { getIframeOrigin } from './iframes';
-import { isPopupWindowHostElem } from './popup/popup-container';
 import type { SafeAreaProvider } from './safe-area-provider';
 
 interface ViewportDimensions {
   viewportWidth: number;
   viewportHeight: number;
-}
-
-export interface PuckRenderOptions {
-  icon: 'default' | 'sky';
-  theme: string;
 }
 
 export function isPuckPointerEvent(
@@ -36,44 +39,93 @@ export interface PuckPointerEvent extends PointerEvent {
 }
 
 type ClickState =
-  | {
-      kind: 'idle';
-    }
+  | { kind: 'idle' }
   | {
       kind: 'firstpointerdown';
       // This is the timeout we use to detect if it's a drag or not
-      timeout: number;
+      singleClickTimeout: number;
+      // This is the timeout we use to detect if it's a click and hold event
+      clickAndHoldTimeout: number;
     }
   | {
       kind: 'dragging';
+      // Can get to the 'dragging' state via either:
+      // - 'firstpointerdown' (click, hold)
+      // - 'secondpointerdown' (click, release, click, hold)
+      // In either case, the click and hold timeout needs to carry over into the drag.
+      clickAndHoldTimeout: number;
     }
   | {
       kind: 'firstclick';
       // This is the timeout we use to detect if it's a double-click or not
-      timeout: number;
+      doubleClickTimeout: number;
     }
   | {
       kind: 'secondpointerdown';
       // This is the same timeout as we start when we enter the firstclick state
-      timeout: number;
+      doubleClickTimeout: number;
+      // This is the timeout we use to detect if it's a click and hold event.
+      // Tap-tap-hold is still a valid way to trigger the click-and-hold.
+      clickAndHoldTimeout: number;
     };
 
 interface ClickStateBase<T extends string> {
   kind: T;
 }
-interface ClickStateWithTimeout<T extends string> extends ClickStateBase<T> {
-  timeout: number;
+
+interface ClickStateWithClickTimeout<T extends string>
+  extends ClickStateBase<T> {
+  singleClickTimeout: number;
 }
 
-function clickStateHasTimeout<T extends ClickState['kind']>(
+function clickStateHasSingleClickTimeout<T extends ClickState['kind']>(
   clickState: ClickStateBase<T>
-): clickState is ClickStateWithTimeout<T> {
-  return typeof (clickState as ClickStateWithTimeout<T>).timeout === 'number';
+): clickState is ClickStateWithClickTimeout<T> {
+  return (
+    typeof (clickState as ClickStateWithClickTimeout<T>).singleClickTimeout ===
+    'number'
+  );
+}
+
+interface ClickStateWithDoubleClickTimeout<T extends string>
+  extends ClickStateBase<T> {
+  doubleClickTimeout: number;
+}
+
+function clickStateHasDoubleClickTimeout<T extends ClickState['kind']>(
+  clickState: ClickStateBase<T>
+): clickState is ClickStateWithDoubleClickTimeout<T> {
+  return (
+    typeof (clickState as ClickStateWithDoubleClickTimeout<T>)
+      .doubleClickTimeout === 'number'
+  );
 }
 
 function clearClickTimeout(clickState: ClickState) {
-  if (clickStateHasTimeout(clickState)) {
-    clearTimeout(clickState.timeout);
+  if (clickStateHasSingleClickTimeout(clickState)) {
+    clearTimeout(clickState.singleClickTimeout);
+  } else if (clickStateHasDoubleClickTimeout(clickState)) {
+    clearTimeout(clickState.doubleClickTimeout);
+  }
+}
+
+interface ClickStateWithClickAndHoldTimeout<T extends string>
+  extends ClickStateBase<T> {
+  clickAndHoldTimeout: number;
+}
+
+function clickStateHasClickAndHoldTimeout<T extends ClickState['kind']>(
+  clickState: ClickStateBase<T>
+): clickState is ClickStateWithClickAndHoldTimeout<T> {
+  return (
+    typeof (clickState as ClickStateWithClickAndHoldTimeout<T>)
+      .clickAndHoldTimeout === 'number'
+  );
+}
+
+function clearClickAndHoldTimeout(clickState: ClickState) {
+  if (clickStateHasClickAndHoldTimeout(clickState)) {
+    clearTimeout(clickState.clickAndHoldTimeout);
   }
 }
 
@@ -90,8 +142,12 @@ export type InitialPuckPosition = Omit<PuckState, 'active'>;
 type RestoreContentParams = { root: Element; restore: () => void };
 
 export const LookupPuckId = 'tenten-ja-puck';
+const OnboardingTooltipId = 'tenten-ja-puck-onboarding';
 
 const clickHysteresis = 300;
+const clickAndHoldHysteresis = 1000;
+const onboardingAutoHideDuration = 8000;
+const verticalModeOnboardingSeenKey = 'tenten-puck-vertical-onboarding-seen';
 
 export class LookupPuck {
   private puck: HTMLDivElement | undefined;
@@ -112,12 +168,31 @@ export class LookupPuck {
   // The translateY value to apply to the moon when it is orbiting below the
   // earth. Expressed as an absolute (positive) value.
   private targetAbsoluteOffsetYBelow: number;
+  // The translateX value to apply to the moon when it is orbiting to the
+  // left or right of earth and on the same side as the user's hand. Expressed
+  // as an absolute (positive) value.
+  private targetAbsoluteOffsetXHandSide: number;
+  // The translateX value to apply to the moon when it is orbiting to the
+  // left or right of earth and on the opposite side from the user's hand (or
+  // handedness is unset). Expressed as an absolute (positive) value.
+  private targetAbsoluteOffsetXNonHandSide: number;
   // The translate (X and Y) values applied to the moon whilst it is being
   // dragged. They are measured relative to the midpoint of the moon (which is
   // also the midpoint of the earth).
   private targetOffset: { x: number; y: number } = { x: 0, y: 0 };
-  private targetOrientation: 'above' | 'below' = 'above';
+  private targetOrientation: PuckState['orientation'] = {
+    readingDirection: 'horizontal',
+    moonSide: 'above',
+  };
   private cachedViewportDimensions: ViewportDimensions | null = null;
+  private ring: SVGElement | undefined;
+
+  // Values passed down from user preferences
+  private handedness: ContentConfigParams['handedness'];
+  private toolbarIcon: ContentConfigParams['toolbarIcon'];
+  private theme: string;
+  private fontSize: FontSize;
+  private fontFace: FontFace;
 
   // We need to detect if the browser has a buggy position:fixed behavior
   // (as is currently the case for Safari
@@ -142,16 +217,30 @@ export class LookupPuck {
   private onLookupDisabled: () => void;
   private onPuckStateChanged: (puckState: PuckState) => void;
 
+  // Onboarding tooltip state
+  private onboardingTooltip: HTMLDivElement | undefined;
+  private onboardingTimeout: number | undefined;
+
   constructor({
     initialPosition,
     safeAreaProvider,
     onLookupDisabled,
     onPuckStateChanged,
+    handedness,
+    toolbarIcon,
+    theme,
+    fontSize,
+    fontFace,
   }: {
     initialPosition?: InitialPuckPosition;
     safeAreaProvider: SafeAreaProvider;
     onLookupDisabled: () => void;
     onPuckStateChanged: (puckState: PuckState) => void;
+    handedness: ContentConfigParams['handedness'];
+    toolbarIcon: ContentConfigParams['toolbarIcon'];
+    theme: ContentConfigParams['popupStyle'];
+    fontSize: FontSize;
+    fontFace: FontFace;
   }) {
     if (initialPosition) {
       this.puckX = initialPosition.x;
@@ -165,6 +254,11 @@ export class LookupPuck {
     this.safeAreaProvider = safeAreaProvider;
     this.onLookupDisabled = onLookupDisabled;
     this.onPuckStateChanged = onPuckStateChanged;
+    this.handedness = handedness;
+    this.toolbarIcon = toolbarIcon;
+    this.theme = theme;
+    this.fontSize = fontSize;
+    this.fontFace = fontFace;
   }
 
   private readonly onSafeAreaUpdated = () => {
@@ -177,11 +271,15 @@ export class LookupPuck {
     y,
     safeAreaLeft,
     safeAreaRight,
+    safeAreaTop,
+    safeAreaBottom,
   }: {
     x: number;
     y: number;
     safeAreaLeft: number;
     safeAreaRight: number;
+    safeAreaTop: number;
+    safeAreaBottom: number;
   }) {
     this.puckX = x;
     this.puckY = y;
@@ -191,28 +289,38 @@ export class LookupPuck {
       this.puck.style.transform = `translate(${this.puckX}px, ${this.puckY}px)`;
     }
 
-    // Calculate the corresponding target point (that is, the moon)
+    const isHorizontal =
+      this.targetOrientation.readingDirection === 'horizontal';
 
     // First determine the actual range of motion of the moon, taking into
     // account any safe area on either side of the screen.
-    const { viewportWidth } = this.getViewportDimensions(document);
-    const safeAreaWidth = viewportWidth - safeAreaLeft - safeAreaRight;
+    const { viewportWidth, viewportHeight } =
+      this.getViewportDimensions(document);
+    const safeAreaWidthOrHeight = isHorizontal
+      ? viewportWidth - safeAreaLeft - safeAreaRight
+      : viewportHeight - safeAreaTop - safeAreaBottom;
 
     // Now work out where the moon is within that range such that it is
     //
-    // * 0 when the the left side of the earth is touching the left safe area
+    // * 0 when the the left or top side of the earth is touching the left or top safe area
     //   inset, and
-    // * 1 when the right side of the earth is touching the right safe area
+    // * 1 when the right or bottom side of the earth is touching the right or bottom safe area
     //   inset.
     const clamp = (num: number, min: number, max: number) =>
       Math.min(Math.max(num, min), max);
-    const horizontalPortion = clamp(
-      (this.puckX - safeAreaLeft) / (safeAreaWidth - this.earthWidth),
+    // 'major' here refers to the major axis--either the x or y for horizontal
+    // or vertical reading direction, respectively.
+    const majorPortion = clamp(
+      isHorizontal
+        ? (this.puckX - safeAreaLeft) /
+            (safeAreaWidthOrHeight - this.earthWidth)
+        : (this.puckY - safeAreaTop) /
+            (safeAreaWidthOrHeight - this.earthHeight),
       0,
       1
     );
 
-    // Then we calculate the horizontal offset. We need to ensure that we
+    // Then we calculate the major axis offset. We need to ensure that we
     // produce enough displacement that we can reach to the other edge of the
     // safe area in either direction.
 
@@ -229,7 +337,9 @@ export class LookupPuck {
 
     // However, we may need to extend that to reach the other side of the safe
     // area.
-    const safeAreaExtent = Math.max(safeAreaLeft, safeAreaRight);
+    const safeAreaExtent = isHorizontal
+      ? Math.max(safeAreaLeft, safeAreaRight)
+      : Math.max(safeAreaTop, safeAreaBottom);
     const requiredReach = safeAreaExtent + radiusOfEarth;
     const requiredRadius = requiredReach / Math.sin(range / 2);
 
@@ -237,24 +347,36 @@ export class LookupPuck {
     const offsetRadius = Math.max(preferredRadius, requiredRadius);
 
     // Now finally we can calculate the horizontal offset.
-    const angle = horizontalPortion * range - range / 2;
-    const offsetX = Math.sin(angle) * offsetRadius;
+    const angle = majorPortion * range - range / 2;
 
-    // For the vertical offset, we don't actually extend the moon out by the
-    // same radius but instead try to keep a fixed vertical offset since that
-    // makes scanning horizontally easier and allows us to tweak that offset to
-    // make room for the user's thumb.
-    const offsetYOrientationFactor =
-      this.targetOrientation === 'above' ? -1 : 1;
-    const offsetY =
-      (this.targetOrientation === 'above'
-        ? this.targetAbsoluteOffsetYAbove
-        : this.targetAbsoluteOffsetYBelow) * offsetYOrientationFactor;
+    // For the minor-axis offset, we don't actually extend the moon out by the
+    // same radius but instead try to keep a fixed offset along that axis since
+    // that makes scanning easier and allows us to tweak that offset to make
+    // room for the user's thumb.
+    const orientationFactor =
+      this.targetOrientation.moonSide === 'above' ||
+      this.targetOrientation.moonSide === 'left'
+        ? -1
+        : 1;
+
+    const offsetX = !isHorizontal
+      ? (this.handedness === this.targetOrientation.moonSide
+          ? this.targetAbsoluteOffsetXHandSide
+          : this.targetAbsoluteOffsetXNonHandSide) * orientationFactor
+      : Math.sin(angle) * offsetRadius;
+    const offsetY = isHorizontal
+      ? (this.targetOrientation.moonSide === 'above'
+          ? this.targetAbsoluteOffsetYAbove
+          : this.targetAbsoluteOffsetYBelow) * orientationFactor
+      : Math.sin(angle) * offsetRadius;
 
     // At rest, make the target land on the surface of the puck.
-    const restOffsetX = Math.sin(angle) * radiusOfEarth;
-    const restOffsetY =
-      Math.cos(angle) * radiusOfEarth * offsetYOrientationFactor;
+    const restOffsetX = isHorizontal
+      ? Math.sin(angle) * radiusOfEarth
+      : Math.cos(angle) * radiusOfEarth * orientationFactor;
+    const restOffsetY = isHorizontal
+      ? Math.cos(angle) * radiusOfEarth * orientationFactor
+      : Math.sin(angle) * radiusOfEarth;
 
     this.targetOffset = { x: offsetX, y: offsetY };
 
@@ -277,11 +399,11 @@ export class LookupPuck {
 
     return {
       top:
-        this.targetOrientation === 'above'
+        this.targetOrientation.moonSide === 'above'
           ? moonVerticalClearance
           : earthVerticalClearance,
       bottom:
-        this.targetOrientation === 'above'
+        this.targetOrientation.moonSide === 'above'
           ? earthVerticalClearance
           : moonVerticalClearance,
       left:
@@ -293,7 +415,7 @@ export class LookupPuck {
     };
   }
 
-  public getTargetOrientation(): 'above' | 'below' {
+  public getTargetOrientation(): PuckState['orientation'] {
     return this.targetOrientation;
   }
 
@@ -372,6 +494,8 @@ export class LookupPuck {
       y: clampedY,
       safeAreaLeft,
       safeAreaRight,
+      safeAreaTop,
+      safeAreaBottom,
     });
   }
 
@@ -396,6 +520,10 @@ export class LookupPuck {
     }
 
     event.preventDefault();
+
+    // Click-and-hold event only triggers if user doesn't start dragging
+    clearClickAndHoldTimeout(this.clickState);
+    this.cancelClickAndHoldAnimation();
 
     let { clientX, clientY } = event;
 
@@ -441,12 +569,7 @@ export class LookupPuck {
       viewportOffsetTop;
 
     // See what we are pointing at
-    let target =
-      document
-        .elementsFromPoint(targetX, targetY)
-        // Ignore any element in the 10ten popup itself; we don't want
-        // the puck moon to hold the popup open like a mouse event does.
-        .find((target) => !isPopupWindowHostElem(target)) || null;
+    let target = document.elementFromPoint(targetX, targetY);
 
     // Check if we need to adjust the content to look it up.
     //
@@ -682,17 +805,39 @@ export class LookupPuck {
       // being fired every time the puck gets parked.
       this.clickState = {
         kind: 'firstpointerdown',
-        timeout: window.setTimeout(() => {
+        singleClickTimeout: window.setTimeout(() => {
           if (this.clickState.kind === 'firstpointerdown') {
-            this.clickState = { kind: 'dragging' };
+            this.clickState = {
+              kind: 'dragging',
+              clickAndHoldTimeout: this.clickState.clickAndHoldTimeout,
+            };
           }
         }, clickHysteresis),
+        // Since the timeout period for click-and-hold is longer than the
+        // drag timeout, we will have already transitioned to the 'dragging'
+        // state by the time this timeout triggers.
+        clickAndHoldTimeout: window.setTimeout(() => {
+          if (this.clickState.kind === 'dragging') {
+            // We don't want to transition out of the dragging state.
+            // User can click-and-hold and then start dragging without
+            // lifting up their finger again.
+            this.onPuckClickAndHold();
+          }
+        }, clickAndHoldHysteresis),
       };
     } else if (this.clickState.kind === 'firstclick') {
       // Carry across the timeout from 'firstclick', as we still want to
       // transition back to 'idle' if no 'pointerdown' event came within
       // the hysteresis period of the preceding 'firstclick' state.
-      this.clickState = { ...this.clickState, kind: 'secondpointerdown' };
+      this.clickState = {
+        ...this.clickState,
+        kind: 'secondpointerdown',
+        clickAndHoldTimeout: window.setTimeout(() => {
+          if (this.clickState.kind === 'dragging') {
+            this.onPuckClickAndHold();
+          }
+        }, clickAndHoldHysteresis),
+      };
     }
 
     event.preventDefault();
@@ -700,6 +845,8 @@ export class LookupPuck {
 
     this.puck.classList.add('dragging');
     this.puck.setPointerCapture(event.pointerId);
+
+    this.beginDelayedClickAndHoldAnimation();
 
     // We need to register in the capture phase because Bibi reader (which
     // apparently is based on Epub.js) registers a pointermove handler on the
@@ -755,9 +902,16 @@ export class LookupPuck {
     this.clickState = {
       ...this.clickState,
       kind: 'secondpointerdown',
+      clickAndHoldTimeout: window.setTimeout(() => {
+        if (this.clickState.kind === 'dragging') {
+          this.onPuckClickAndHold();
+        }
+      }, clickAndHoldHysteresis),
     };
 
     event.preventDefault();
+
+    this.beginDelayedClickAndHoldAnimation();
 
     // See note in onPointerDown for why we need to register in the capture
     // phase.
@@ -808,10 +962,44 @@ export class LookupPuck {
   };
 
   private readonly onPuckDoubleClick = () => {
-    this.targetOrientation =
-      this.targetOrientation === 'above' ? 'below' : 'above';
+    if (this.targetOrientation.readingDirection === 'horizontal') {
+      this.targetOrientation.moonSide =
+        this.targetOrientation.moonSide === 'above' ? 'below' : 'above';
+    } else {
+      this.targetOrientation.moonSide =
+        this.targetOrientation.moonSide === 'left' ? 'right' : 'left';
+    }
+
     this.setPositionWithinSafeArea(this.puckX, this.puckY);
     this.notifyPuckStateChanged();
+  };
+
+  private readonly onPuckClickAndHold = () => {
+    // Vibrate for touch feedback (note this will only work on Android)
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+
+    const wasHorizontal =
+      this.targetOrientation.readingDirection === 'horizontal';
+    this.targetOrientation = wasHorizontal
+      ? { readingDirection: 'vertical', moonSide: 'left' }
+      : { readingDirection: 'horizontal', moonSide: 'above' };
+
+    // Show onboarding tooltip if this is the first time switching to vertical
+    if (wasHorizontal) {
+      void this.hasSeenOnboarding().then((hasSeen) => {
+        if (!hasSeen) {
+          this.showOnboardingTooltip();
+        }
+      });
+    }
+
+    this.notifyPuckStateChanged();
+    this.setPositionWithinSafeArea(this.puckX, this.puckY);
+    // Temporarily sets the puck icon to a bidirectional arrow
+    // that will rotate to show the new reading direction.
+    this.setIcon('arrow');
   };
 
   // May be called manually (without an event), or upon 'pointerup' or
@@ -828,6 +1016,8 @@ export class LookupPuck {
       this.notifyPuckStateChanged();
     }
 
+    this.cancelClickAndHoldAnimation();
+
     window.removeEventListener('pointermove', this.onWindowPointerMove, {
       capture: true,
     });
@@ -836,6 +1026,7 @@ export class LookupPuck {
 
     if (!event || event.type === 'pointercancel') {
       clearClickTimeout(this.clickState);
+      clearClickAndHoldTimeout(this.clickState);
       this.clickState = { kind: 'idle' };
       return;
     }
@@ -847,22 +1038,24 @@ export class LookupPuck {
     if (this.clickState.kind === 'firstpointerdown') {
       // Prevent 'firstpointerdown' transitioning to 'dragging' state.
       clearClickTimeout(this.clickState);
+      clearClickAndHoldTimeout(this.clickState);
 
       // Wait for the hysteresis period to expire before calling
       // this.onPuckSingleClick() (to rule out a double-click).
       this.clickState = {
         kind: 'firstclick',
-        timeout: window.setTimeout(() => {
+        doubleClickTimeout: window.setTimeout(() => {
           if (this.clickState.kind === 'firstclick') {
             this.clickState = { kind: 'idle' };
             this.onPuckSingleClick();
           } else if (this.clickState.kind === 'secondpointerdown') {
-            this.clickState = { kind: 'dragging' };
+            this.clickState = { ...this.clickState, kind: 'dragging' };
           }
         }, clickHysteresis),
       };
     } else if (this.clickState.kind === 'secondpointerdown') {
       clearClickTimeout(this.clickState);
+      clearClickAndHoldTimeout(this.clickState);
       this.clickState = { kind: 'idle' };
       this.onPuckDoubleClick();
     } else if (this.clickState.kind === 'dragging') {
@@ -872,7 +1065,7 @@ export class LookupPuck {
 
   private readonly noOpEventHandler = () => {};
 
-  render({ icon, theme }: PuckRenderOptions): void {
+  render(): void {
     // Set up shadow tree
     const container = getOrCreateEmptyContainer({
       id: LookupPuckId,
@@ -883,12 +1076,26 @@ export class LookupPuck {
     this.puck = document.createElement('div');
     this.puck.classList.add('puck');
 
+    // This fills as the user begins pressing and holding the puck
+    const clickAndHoldRing = document.createElementNS(SVG_NS, 'svg');
+    clickAndHoldRing.classList.add('click-and-hold-ring');
+    clickAndHoldRing.setAttribute('width', '120');
+    clickAndHoldRing.setAttribute('height', '120');
+    clickAndHoldRing.setAttribute('viewBox', '0 0 120 120');
+    this.ring = document.createElementNS(SVG_NS, 'circle');
+    this.ring.classList.add('ring-fill');
+    this.ring.setAttribute('cx', '60');
+    this.ring.setAttribute('cy', '60');
+    this.ring.setAttribute('r', '20');
+    clickAndHoldRing.append(this.ring);
+    this.puck.append(clickAndHoldRing);
+
     const earth = document.createElement('div');
     earth.classList.add('earth');
     this.puck.append(earth);
 
     // Brand the earth
-    const logoSvg = this.renderIcon(icon);
+    const logoSvg = this.renderIcon(this.toolbarIcon);
     logoSvg.classList.add('logo');
     earth.append(logoSvg);
 
@@ -899,7 +1106,7 @@ export class LookupPuck {
     container.shadowRoot!.append(this.puck);
 
     // Set theme styles
-    this.puck.classList.add(getThemeClass(theme));
+    this.puck.classList.add(getThemeClass(this.theme));
 
     // Calculate the earth size (which is equal to the puck's overall size)
     if (!this.earthWidth || !this.earthHeight) {
@@ -933,6 +1140,11 @@ export class LookupPuck {
           getComputedStyle(moon).getPropertyValue('--minimum-moon-offset-y')
         ) || 0;
 
+      const minimumMoonOffsetX =
+        parseFloat(
+          getComputedStyle(moon).getPropertyValue('--minimum-moon-offset-x')
+        ) || 0;
+
       // Depending on whether the moon is above or below the earth, some extra
       // altitude needs to be added to the orbit so that the thumb doesn't cover
       // it.
@@ -945,7 +1157,23 @@ export class LookupPuck {
       const extraAltitudeToClearBelowThumb =
         parseFloat(
           getComputedStyle(moon).getPropertyValue(
-            '--extra-altitude-to-clear-above-thumb'
+            '--extra-altitude-to-clear-below-thumb'
+          )
+        ) || 0;
+
+      // Same thing goes for when we are in vertical reading mode and want to
+      // add extra altitude for the side that the user's handedness is set to
+      // (if any).
+      const extraAltitudeToClearBesideThumbNonHandSide =
+        parseFloat(
+          getComputedStyle(moon).getPropertyValue(
+            '--extra-altitude-to-clear-beside-thumb-non-hand-side'
+          )
+        ) || 0;
+      const extraAltitudeToClearBesideThumbHandSide =
+        parseFloat(
+          getComputedStyle(moon).getPropertyValue(
+            '--extra-altitude-to-clear-beside-thumb-hand-side'
           )
         ) || 0;
 
@@ -967,6 +1195,13 @@ export class LookupPuck {
         minimumMoonOffsetY +
         extraAltitudeToClearBelowThumb +
         extraAltitudeToClearIos15SafariSafeAreaActivationZone;
+
+      // Use the same extra altitude value for both the left and right side
+      // orbits, since we can't know the handedness of the user.
+      this.targetAbsoluteOffsetXNonHandSide =
+        minimumMoonOffsetX + extraAltitudeToClearBesideThumbNonHandSide;
+      this.targetAbsoluteOffsetXHandSide =
+        minimumMoonOffsetX + extraAltitudeToClearBesideThumbHandSide;
     }
 
     this.setPositionWithinSafeArea(this.puckX, this.puckY);
@@ -991,8 +1226,13 @@ export class LookupPuck {
     this.checkForBuggyPositionFixed();
   }
 
-  private renderIcon(icon: 'default' | 'sky'): SVGSVGElement {
-    return icon === 'default' ? this.renderDefaultIcon() : this.renderSkyIcon();
+  private renderIcon(icon: 'default' | 'sky' | 'arrow'): SVGSVGElement {
+    if (icon === 'sky') {
+      return this.renderSkyIcon();
+    } else if (icon === 'arrow') {
+      return this.renderArrowIcon();
+    }
+    return this.renderDefaultIcon();
   }
 
   private renderDefaultIcon(): SVGSVGElement {
@@ -1047,7 +1287,32 @@ export class LookupPuck {
     return icon;
   }
 
+  private renderArrowIcon(): SVGSVGElement {
+    const icon = document.createElementNS(SVG_NS, 'svg');
+    icon.setAttribute('viewBox', '0 0 30 30');
+
+    const arrowsPath = document.createElementNS(SVG_NS, 'path');
+    arrowsPath.id = 'switching-direction-icon-arrows-path';
+    arrowsPath.setAttribute(
+      'd',
+      'M22.2 16.2v-2.4h4.4V11l3.2 3.9-3.2 4v-2.8h-4.4ZM7.8 16.2v-2.5H3.4v-2.6L.2 15l3.2 4v-2.8h4.4Z'
+    );
+    icon.append(arrowsPath);
+
+    const textPath = document.createElementNS(SVG_NS, 'path');
+    textPath.setAttribute('fill-rule', 'nonzero');
+    textPath.setAttribute(
+      'd',
+      'M17.8 13.2a5 5 0 0 1 2.2 1.6c.5.7.8 1.5.8 2.3 0 1.1-.4 2-1.1 2.8-.8.8-1.8 1.2-3.2 1.2l-.8-1.4c1.4-.1 2.3-.4 2.8-.8.6-.4.8-1 .8-1.8 0-.6-.1-1.1-.5-1.5-.3-.5-.8-.8-1.4-1a11 11 0 0 1-1.6 3c-.7.9-1.5 1.6-2.5 2.2a5 5 0 0 1-2.2.9c-.4 0-.9-.3-1.3-.8a3 3 0 0 1-.6-2c0-.8.3-1.7 1-2.5.5-.8 1.4-1.5 2.5-2l.3-1.7h-2.6l-.1-1.6a16.4 16.4 0 0 0 3 0l.2-1.2 1.6.2-.3 1 2.5-.3.3 1.2c-.9.3-2 .5-3.2.6l-.2 1.4a8.4 8.4 0 0 1 2.1-.1l.1-.7c0-.1 0-.2.2-.1l1.3.4-.1.7Zm-1.9 1-1.9.3a16.7 16.7 0 0 0 0 2.8c1-1 1.5-2 2-3Zm-3 4.2c-.2-1-.3-2-.3-3.4-.7.6-1.2 1-1.5 1.7-.3.5-.5 1-.5 1.6 0 .6.3 1 .7 1 .4 0 1-.3 1.6-.9Z'
+    );
+    icon.append(textPath);
+
+    return icon;
+  }
+
   setTheme(theme: string) {
+    this.theme = theme;
+
     if (!this.puck) {
       return;
     }
@@ -1061,7 +1326,7 @@ export class LookupPuck {
     this.puck.classList.add(getThemeClass(theme));
   }
 
-  setIcon(icon: 'default' | 'sky') {
+  setIcon(icon: 'default' | 'sky' | 'arrow') {
     if (!this.puck) {
       return;
     }
@@ -1072,16 +1337,202 @@ export class LookupPuck {
       return;
     }
 
-    const classes = logo.getAttribute('class') || '';
+    let classes = [...logo.classList];
+    classes = classes.filter((c) => !c.startsWith('switching-direction-to-'));
 
     logo.remove();
     const newLogo = this.renderIcon(icon);
-    newLogo.setAttribute('class', classes);
+
+    // Special case for the arrow icon.
+    // The icon only gets set to the arrow when transitioning reading
+    // directions. It animates the arrow turning and then changes back.
+    // It does not change the local `toolbarIcon` value.
+    if (icon === 'arrow') {
+      classes.push(
+        `switching-direction-to-${this.targetOrientation.readingDirection}`
+      );
+      newLogo.addEventListener('animationend', (e) => {
+        if (e.animationName === 'rotate-arrow') {
+          // Restore original icon after a delay since last direction switch
+          this.restoreIconAfterDebounce();
+        }
+      });
+    } else {
+      this.toolbarIcon = icon;
+    }
+
+    newLogo.setAttribute('class', classes.join(' '));
     logoParent.append(newLogo);
+  }
+
+  setHandedness(handedness: ContentConfigParams['handedness']) {
+    this.handedness = handedness;
+    // Recalculate position in case handedness has changed
+    this.setPositionWithinSafeArea(this.puckX, this.puckY);
+  }
+
+  setFontFace(fontFace: FontFace) {
+    if (!this.onboardingTooltip) {
+      return;
+    }
+
+    if (fontFace === 'bundled') {
+      this.onboardingTooltip.classList.remove('system-fonts');
+      this.onboardingTooltip.classList.add('bundled-fonts');
+    } else {
+      this.onboardingTooltip.classList.remove('bundled-fonts');
+      this.onboardingTooltip.classList.add('system-fonts');
+    }
+
+    this.fontFace = fontFace;
+  }
+
+  setFontSize(size: FontSize) {
+    if (!this.onboardingTooltip) {
+      return;
+    }
+
+    for (const className of this.onboardingTooltip.classList.values()) {
+      if (className.startsWith('font-')) {
+        this.onboardingTooltip.classList.remove(className);
+      }
+    }
+
+    this.onboardingTooltip.classList.add(`font-${size}`);
+
+    this.fontSize = size;
+  }
+
+  private readonly restoreIconAfterDebounce = debounce(() => {
+    this.setIcon(this.toolbarIcon);
+  }, clickAndHoldHysteresis * 2.25);
+
+  private beginDelayedClickAndHoldAnimation() {
+    if (!this.ring) {
+      return;
+    }
+
+    const baseDelay = 200; // ms to wait before ring starts filling
+    // Extra 100 ms is to match the time needed for the moon to complete its
+    // transform. I've tried extracting that into a CSS var and using it in
+    // both places, but it didn't seem to work.
+    const totalDuration = clickAndHoldHysteresis - baseDelay + 100;
+    const popDelay = baseDelay + 50;
+    const fill = `fill-ring ${totalDuration}ms ${baseDelay}ms ease-out forwards`;
+    const pop = `pop-and-fade ${totalDuration}ms ${popDelay}ms ease-out forwards`;
+
+    this.ring.style.animation = `${fill}, ${pop}`;
+  }
+
+  private cancelClickAndHoldAnimation() {
+    if (this.ring) {
+      this.ring.style.animation = 'none';
+    }
+  }
+
+  private async hasSeenOnboarding(): Promise<boolean> {
+    const results = await browser.storage.local.get(
+      verticalModeOnboardingSeenKey
+    );
+    return results[verticalModeOnboardingSeenKey] === true;
+  }
+
+  private markOnboardingSeen() {
+    return browser.storage.local.set({ [verticalModeOnboardingSeenKey]: true });
+  }
+
+  private showOnboardingTooltip() {
+    const container = getOrCreateEmptyContainer({
+      id: OnboardingTooltipId,
+      styles: puckOnboardingStyles.toString(),
+    });
+
+    // Tooltip elem
+    const tooltip = document.createElement('div');
+    tooltip.classList.add('vertical-onboarding-tooltip');
+    tooltip.classList.add(getThemeClass(this.theme));
+
+    const content = document.createElement('div');
+    content.classList.add('vertical-onboarding-content');
+
+    // Title
+    const title = document.createElement('h3');
+    title.classList.add('vertical-onboarding-title');
+    title.textContent = browser.i18n.getMessage(
+      'vertical_mode_onboarding_tooltip_title'
+    );
+
+    // Body
+    const body = document.createElement('p');
+    body.classList.add('vertical-onboarding-body');
+    body.textContent = browser.i18n.getMessage(
+      'vertical_mode_onboarding_tooltip_body'
+    );
+
+    content.append(title, body);
+
+    // OK button
+    const button = document.createElement('button');
+    button.classList.add('vertical-onboarding-ok-button');
+    button.textContent = browser.i18n.getMessage(
+      'vertical_mode_onboarding_tooltip_ok_button_label'
+    );
+    button.addEventListener('click', () => {
+      this.hideOnboardingTooltip();
+    });
+
+    tooltip.append(content, button);
+    container.shadowRoot!.append(tooltip);
+
+    this.onboardingTooltip = tooltip;
+    this.setFontFace(this.fontFace);
+    this.setFontSize(this.fontSize);
+
+    // Auto-hide the button after a duration
+    this.onboardingTimeout = window.setTimeout(() => {
+      this.hideOnboardingTooltip();
+    }, onboardingAutoHideDuration);
+
+    // Dismiss tooltip on click outside of it
+    window.addEventListener(
+      'mousedown',
+      (event: MouseEvent) => {
+        if (
+          this.onboardingTooltip &&
+          !this.onboardingTooltip.contains(event.target as Node)
+        ) {
+          // Hide with slight delay
+          setTimeout(() => this.hideOnboardingTooltip(), 250);
+        }
+      },
+      { capture: true }
+    );
+
+    this.markOnboardingSeen();
+  }
+
+  private hideOnboardingTooltip() {
+    if (this.onboardingTimeout) {
+      clearTimeout(this.onboardingTimeout);
+      this.onboardingTimeout = undefined;
+    }
+
+    if (!this.onboardingTooltip) {
+      return;
+    }
+
+    this.onboardingTooltip.classList.add('fade-out');
+    this.onboardingTooltip.addEventListener('animationend', (e) => {
+      if (e.animationName === 'fade-out') {
+        removeContentContainer(OnboardingTooltipId);
+        this.onboardingTooltip = undefined;
+      }
+    });
   }
 
   unmount(): void {
     this.restoreContent();
+    this.hideOnboardingTooltip();
     removePuck();
     window.visualViewport?.removeEventListener(
       'resize',
@@ -1109,12 +1560,16 @@ export class LookupPuck {
       }
       window.removeEventListener('pointerup', this.noOpEventHandler);
       clearClickTimeout(this.clickState);
+      clearClickAndHoldTimeout(this.clickState);
       this.clickState = { kind: 'idle' };
 
       // Reset puck position
       this.puckX = Number.MAX_SAFE_INTEGER;
       this.puckY = Number.MAX_SAFE_INTEGER;
-      this.targetOrientation = 'above';
+      this.targetOrientation = {
+        readingDirection: 'horizontal',
+        moonSide: 'above',
+      };
 
       return;
     }

@@ -1,13 +1,14 @@
 /// <reference path="../common/constants.d.ts" />
 /// <reference path="./mail-extensions.d.ts" />
 import { allMajorDataSeries } from '@birchill/jpdict-idb';
-import browser, { Action } from 'webextension-polyfill';
+import type { Action } from 'webextension-polyfill';
+import browser from 'webextension-polyfill';
 
 import { localizedDataSeriesKey } from '../common/data-series-labels';
 import { throttle } from '../utils/throttle';
 import { isSafari } from '../utils/ua-utils';
 
-import { JpdictStateWithFallback } from './jpdict';
+import type { JpdictStateWithFallback } from './jpdict';
 
 interface BrowserActionState {
   enabled: boolean;
@@ -178,10 +179,7 @@ async function doUpdateBrowserAction({
   ) {
     await action.setBadgeText({ text: '!', tabId });
     await browser.composeAction?.setBadgeText({ text: '!' });
-    await action.setBadgeBackgroundColor({
-      color: 'yellow',
-      tabId,
-    });
+    await action.setBadgeBackgroundColor({ color: 'yellow', tabId });
     await browser.composeAction?.setBadgeBackgroundColor({ color: 'yellow' });
     tooltip = browser.i18n.getMessage('command_toggle_update_error');
   } else {

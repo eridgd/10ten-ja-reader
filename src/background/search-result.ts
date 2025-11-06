@@ -4,7 +4,7 @@ import type {
   KanjiResult,
 } from '@birchill/jpdict-idb';
 
-import { Reason } from './deinflect';
+import type { Reason } from './deinflect';
 
 // Words
 
@@ -15,8 +15,10 @@ export type CandidateWordResult = DictionaryWordResult & {
 };
 
 export type WordResult = DictionaryWordResult & {
-  reason?: string;
+  reasonChains?: Array<Array<Reason>>;
   romaji?: Array<string>;
+  matchLen: number;
+  sourceOffset?: number;
 };
 
 export type Sense = WordResult['s'][0];
@@ -40,9 +42,7 @@ export interface KanjiSearchResult {
 
 // Names
 
-export type NameResult = JpdictNameResult & {
-  matchLen: number;
-};
+export type NameResult = JpdictNameResult & { matchLen: number };
 
 export interface NameSearchResult {
   type: 'names';

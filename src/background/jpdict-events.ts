@@ -1,4 +1,4 @@
-import { JpdictState } from '../background/jpdict';
+import type { JpdictState } from '../background/jpdict';
 import { serializeError } from '../utils/serialize-error';
 
 export const queryState = () => ({ type: 'querystate' as const });
@@ -9,11 +9,7 @@ export const updateDb = ({
 }: {
   lang: string;
   force: boolean;
-}) => ({
-  type: 'update' as const,
-  lang,
-  force,
-});
+}) => ({ type: 'update' as const, lang, force });
 
 export const cancelUpdateDb = () => ({ type: 'cancelupdate' as const });
 

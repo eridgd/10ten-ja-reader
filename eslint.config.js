@@ -2,7 +2,6 @@ import eslint from '@eslint/js';
 import tsParser from '@typescript-eslint/parser';
 import vitest from '@vitest/eslint-plugin';
 import reactRecommended from 'eslint-plugin-react/configs/recommended.js';
-import tailwind from 'eslint-plugin-tailwindcss';
 import globals from 'globals';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +13,6 @@ const __dirname = path.dirname(__filename);
 export default [
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
-  ...tailwind.configs['flat/recommended'],
   reactRecommended,
   {
     languageOptions: {
@@ -25,20 +23,13 @@ export default [
       sourceType: 'module',
 
       parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
+        ecmaFeatures: { jsx: true },
         project: 'tsconfig.json',
         tsconfigRootDir: __dirname,
       },
     },
 
-    settings: {
-      react: {
-        version: '16.0',
-        pragma: 'h',
-      },
-    },
+    settings: { react: { version: '16.0', pragma: 'h' } },
 
     rules: {
       curly: 'error',
@@ -56,6 +47,11 @@ export default [
       'tailwindcss/classnames-order': 'off',
       'tailwindcss/no-custom-classname': 'off',
 
+      '@typescript-eslint/array-type': ['error', { default: 'generic' }],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports' },
+      ],
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': [
@@ -69,11 +65,7 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/triple-slash-reference': [
         'error',
-        {
-          path: 'always',
-          types: 'never',
-          lib: 'never',
-        },
+        { path: 'always', types: 'never', lib: 'never' },
       ],
     },
   },
@@ -91,11 +83,7 @@ export default [
       'scripts/**/*.{cjs,js,ts}',
       'tests/**/*.{cjs,js,ts}',
     ],
-    languageOptions: {
-      parserOptions: {
-        project: null,
-      },
-    },
+    languageOptions: { parserOptions: { project: null } },
     rules: {
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-misused-promises': 'off',
@@ -103,19 +91,10 @@ export default [
   },
   {
     files: ['*.cjs', 'scripts/**/*.cjs'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-      sourceType: 'commonjs',
-    },
+    languageOptions: { globals: { ...globals.node }, sourceType: 'commonjs' },
   },
   {
     files: ['*.{js,ts}', 'scripts/**/*.{js,ts}'],
-    languageOptions: {
-      globals: {
-        ...globals.nodeBuiltin,
-      },
-    },
+    languageOptions: { globals: { ...globals.nodeBuiltin } },
   },
 ];

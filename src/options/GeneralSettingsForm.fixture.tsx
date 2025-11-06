@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { useSelect, useValue } from 'react-cosmos/client';
 
-import { HighlightStyle } from '../common/content-config-params';
+import type { HighlightStyle } from '../common/content-config-params';
 
 import { GeneralSettingsForm } from './GeneralSettingsForm';
 import './options.css';
@@ -9,10 +9,7 @@ import './options.css';
 export default function GeneralSettingsFormFixture() {
   const [toolbarIcon, setToolbarIcon] = useSelect<'default' | 'sky'>(
     'toolbarIcon',
-    {
-      options: ['default', 'sky'],
-      defaultValue: 'default',
-    }
+    { options: ['default', 'sky'], defaultValue: 'default' }
   );
   const [contextMenuEnable, setContextMenuEnable] = useState(true);
   const [highlightStyle, setHighlightStyle] = useSelect<

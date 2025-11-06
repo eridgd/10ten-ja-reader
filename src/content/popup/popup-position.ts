@@ -1,4 +1,4 @@
-import { MarginBox, PaddingBox, Point } from '../../utils/geometry';
+import type { MarginBox, PaddingBox, Point } from '../../utils/geometry';
 
 import { getScrollOffset } from '../scroll-offset';
 
@@ -439,15 +439,7 @@ function getScreenAutoPosition({
         target: { x, y },
         side,
       });
-      candidates.push(
-        position
-          ? {
-              axis,
-              side,
-              position,
-            }
-          : undefined
-      );
+      candidates.push(position ? { axis, side, position } : undefined);
     }
   }
 

@@ -1,12 +1,10 @@
-import { KanjiResult } from '@birchill/jpdict-idb';
+import type { KanjiResult } from '@birchill/jpdict-idb';
 import type { RenderableProps } from 'preact';
 import { useMemo } from 'preact/hooks';
 
 import { useLocale } from '../../../common/i18n';
-import {
-  ReferenceAbbreviation,
-  getSelectedReferenceLabels,
-} from '../../../common/refs';
+import type { ReferenceAbbreviation } from '../../../common/refs';
+import { getSelectedReferenceLabels } from '../../../common/refs';
 import { classes } from '../../../utils/classes';
 
 import { getReferenceValue } from '../../reference-value';
@@ -36,10 +34,7 @@ export function KanjiReferencesTable({ entry, kanjiReferences }: Props) {
       const value = getReferenceValue(entry, ref.ref, t) || '-';
       referenceTableInfo.push({
         ref: ref.ref,
-        name: {
-          lang: ref.lang,
-          value: ref.short || ref.full,
-        },
+        name: { lang: ref.lang, value: ref.short || ref.full },
         value: {
           lang:
             ref.ref === 'radical' || ref.ref === 'nelson_r' ? 'ja' : undefined,
@@ -86,10 +81,10 @@ export function KanjiReferencesTable({ entry, kanjiReferences }: Props) {
   return (
     <div
       class={classes(
-        'tp-grid tp-grid-cols-[repeat(2,minmax(min-content,1fr))] tp-gap-x-2',
-        'max-[450px]:tp-grid-cols-none',
-        '[--bg-overhang:8px]',
-        '-tp-mx-[--bg-overhang] tp-w-[calc(100%+2*var(--bg-overhang))]'
+        'tp:grid tp:grid-cols-[repeat(2,minmax(min-content,1fr))] tp:gap-x-2',
+        'tp:max-[450px]:grid-cols-none',
+        'tp:[--bg-overhang:8px]',
+        'tp:-mx-(--bg-overhang) tp:w-[calc(100%+2*var(--bg-overhang))]'
       )}
       lang={langTag}
       style={{ gridAutoFlow, gridTemplateRows }}
@@ -102,7 +97,7 @@ export function KanjiReferencesTable({ entry, kanjiReferences }: Props) {
           key={cellInfo.name.value}
         >
           <span lang={cellInfo.name.lang}>{cellInfo.name.value}</span>
-          <span class="tp-ml-2" lang={cellInfo.value.lang}>
+          <span class="tp:ml-2" lang={cellInfo.value.lang}>
             {cellInfo.value.value}
           </span>
         </ReferenceEntryWrapper>
@@ -126,17 +121,17 @@ function ReferenceEntryWrapper(
       : undefined;
 
   const containerStyles = classes(
-    'tp-flex tp-justify-between',
-    'tp-rounded-lg tp-px-[--bg-overhang] tp-py-0.5',
-    'tp-text-sm tp-leading-normal',
+    'tp:flex tp:justify-between',
+    'tp:rounded-lg tp:px-(--bg-overhang) tp:py-0.5',
+    'tp:text-sm tp:leading-normal',
     href &&
-      'tp-cursor-pointer hover:tp-bg-[--cell-bg-hover] tp-underline-offset-2',
+      'tp:cursor-pointer tp:hover:bg-(--cell-bg-hover) tp:underline-offset-2',
     href
-      ? 'tp-text-[--cell-link-fg]'
+      ? 'tp:text-(--cell-link-fg)'
       : props.highlight
-        ? 'tp-text-[--cell-highlight-fg]'
+        ? 'tp:text-(--cell-highlight-fg)'
         : '',
-    props.highlight && 'tp-bg-[--cell-highlight-bg]'
+    props.highlight && 'tp:bg-(--cell-highlight-bg)'
   );
 
   if (href) {

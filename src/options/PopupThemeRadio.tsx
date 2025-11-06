@@ -2,13 +2,15 @@ import type { ComponentProps } from 'preact';
 import { forwardRef } from 'preact/compat';
 import { useId } from 'preact/hooks';
 
+import type { WordResult } from '../background/search-result';
 import type {
   AccentDisplay,
   FontFace,
   FontSize,
   PartOfSpeechDisplay,
 } from '../common/content-config-params';
-import { useLocale } from '../common/i18n';
+import { WordEntry } from '../content/popup/Words/WordEntry';
+import { PopupOptionsProvider } from '../content/popup/options-context';
 import { classes } from '../utils/classes';
 import { useThemeClass } from '../utils/use-theme-class';
 
@@ -76,7 +78,7 @@ const PopupRadio = forwardRef<HTMLInputElement, InputProps>(
         <label
           class={classes(
             'peer-focus-visible:outline-auto group block cursor-pointer rounded-md border border-solid p-2',
-            'border-transparent text-center transition duration-300',
+            'border-transparent transition duration-300',
             props.checked
               ? 'border-zinc-300 bg-zinc-200 dark:border-zinc-500 dark:bg-zinc-600'
               : 'opacity-50 hover:opacity-100 active:opacity-100'
@@ -103,104 +105,59 @@ type PopupPreviewProps = {
   theme: string;
 };
 
+const demoEntry: WordResult = {
+  id: 0,
+  k: [
+    {
+      ent: '理解',
+      p: ['i1', 'n1', 'nf02'],
+      match: true,
+      wk: 21,
+      bv: { l: 3 },
+      matchRange: [0, 2],
+    },
+  ],
+  r: [{ ent: 'りかい', p: ['i1', 'n1', 'nf02'], a: 1, match: true }],
+  s: [{ g: [{ str: 'understanding' }], pos: ['n', 'vt'], match: true }],
+  romaji: ['rikai'],
+  matchLen: 2,
+};
+
 function PopupPreview(props: PopupPreviewProps) {
-  const { t } = useLocale();
   const themeClass = useThemeClass(props.theme);
+
+  const entryData = { ...demoEntry };
+  if (!props.showRomaji) {
+    delete entryData.romaji;
+  }
 
   return (
     <div
+      id="popup-preview"
       class={classes(
         themeClass,
         'window inline-block min-w-[180px] py-2 text-left',
         props.fontFace === 'bundled' && 'bundled-fonts',
-        props.fontSize !== 'normal' && `font-${props.fontSize}`
+        `font-${props.fontSize}`
       )}
     >
-      <div class="entry">
-        <div>
-          <span class="w-kanji">
-            理解
-            {props.showPriority && <Star />}
-            {props.showWaniKaniLevel && (
-              <span class="wk-level">
-                <span>21</span>
-              </span>
-            )}
-            {props.showBunproDecks && (
-              <span class="bp-tag -vocab">
-                <span>{t('popup_bp_vocab_tag', ['3'])}</span>
-              </span>
-            )}
-          </span>
-          <span class="w-kana">
-            {renderKana(props.accentDisplay)}
-            {props.showPriority && <Star />}
-          </span>
-          {props.showRomaji && (
-            <span class="w-romaji" lang="ja">
-              rikai
-            </span>
-          )}
-        </div>
-        {props.showDefinitions && (
-          <span class="w-def" lang="en">
-            {renderPos(props.posDisplay)}
-            {'\u200bunderstanding'}
-          </span>
-        )}
-      </div>
+      <PopupOptionsProvider interactive={false}>
+        <WordEntry
+          config={{
+            accentDisplay: props.accentDisplay,
+            bunproDisplay: props.showBunproDecks,
+            posDisplay: props.posDisplay,
+            readingOnly: !props.showDefinitions,
+            showPriority: props.showPriority,
+            waniKaniVocabDisplay: props.showWaniKaniLevel
+              ? 'show-matches'
+              : 'hide',
+            dictLang: 'en',
+          }}
+          entry={entryData}
+          selectState="unselected"
+        />
+      </PopupOptionsProvider>
     </div>
   );
-}
-
-function Star() {
-  return (
-    <svg class="svgicon opacity-50" viewBox="0 0 98.6 93.2">
-      <path d="M98 34a4 4 0 00-3-1l-30-4L53 2a4 4 0 00-7 0L33 29 4 33a4 4 0 00-3 6l22 20-6 29a4 4 0 004 5 4 4 0 002 0l26-15 26 15a4 4 0 002 0 4 4 0 004-4 4 4 0 000-1l-6-29 22-20a4 4 0 001-5z" />
-    </svg>
-  );
-}
-
-function renderKana(accentDisplay: AccentDisplay) {
-  switch (accentDisplay) {
-    case 'downstep':
-      return 'りꜜかい';
-
-    case 'binary':
-    case 'binary-hi-contrast':
-      return (
-        <span
-          class={classes(
-            'w-binary',
-            accentDisplay === 'binary-hi-contrast' ? '-hi-contrast' : ''
-          )}
-        >
-          <span class="h-l">り</span>
-          <span class="l">かい</span>
-        </span>
-      );
-
-    case 'none':
-      return 'りかい';
-  }
-}
-
-function renderPos(posDisplay: PartOfSpeechDisplay) {
-  const { t } = useLocale();
-
-  switch (posDisplay) {
-    case 'expl':
-      return (
-        <span
-          class="w-pos tag"
-          lang={t('lang_tag')}
-        >{`${t('pos_label_n')},  ${t('pos_label_vs')}`}</span>
-      );
-
-    case 'code':
-      return <span class="w-pos tag">n, vs</span>;
-
-    case 'none':
-      return null;
-  }
 }

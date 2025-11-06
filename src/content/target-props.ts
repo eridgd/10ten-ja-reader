@@ -1,10 +1,10 @@
 import { isTextInputNode, isVerticalText } from '../utils/dom-utils';
-import { Rect } from '../utils/geometry';
+import type { Rect } from '../utils/geometry';
 
 import { getContentType } from './content-type';
 import { getGdocsRangeBboxes, isGdocsSpan } from './gdocs-canvas';
 import { getScrollOffset, toPageCoords, toScreenCoords } from './scroll-offset';
-import { TextRange } from './text-range';
+import type { TextRange } from './text-range';
 
 /// Properties about the target element from which we started lookup needed
 /// so that we can correctly position the popup in a way that doesn't overlap
@@ -27,13 +27,7 @@ export type TargetProps = {
 // We don't want to be doing IPC calls as part of the popup positioning so we
 // just return a set of standard sizes and let the topmost window choose the
 // best fit.
-export type SelectionSizes = {
-  1: Rect;
-  4: Rect;
-  8: Rect;
-  12: Rect;
-  16: Rect;
-};
+export type SelectionSizes = { 1: Rect; 4: Rect; 8: Rect; 12: Rect; 16: Rect };
 
 // Guaranteed to be arranged in ascending order
 export const textBoxSizeLengths: ReadonlyArray<keyof SelectionSizes> = [
@@ -85,7 +79,7 @@ function getInitialClientBboxofTextSelection(
     return undefined;
   }
 
-  // All this fiddling we do do get bboxes for Google docs spans is possibly
+  // All this fiddling we do to get bboxes for Google docs spans is possibly
   // not necessary. The bboxes are mostly useful on mobile devices when we are
   // trying to position the popup to the side of the selection, but the Web
   // version of Google docs is probably not often used on mobile devices.

@@ -1,4 +1,4 @@
-import { ReferenceAbbreviation } from '../../../common/refs';
+import type { ReferenceAbbreviation } from '../../../common/refs';
 
 import { KanjiReferencesTable } from './KanjiReferencesTable';
 
@@ -25,12 +25,13 @@ const TEST_ENTRY = {
   },
   m: ['day', 'sun', 'Japan', 'counter for days'],
   rad: {
-    x: 72,
-    b: '⽇',
-    k: '日',
-    na: ['ひ'],
-    m: ['day', 'sun', 'Japan', 'counter for days'],
-    m_lang: 'en',
+    x: {
+      r: 72,
+      c: '⽇',
+      na: ['ひ'],
+      m: ['day', 'sun', 'Japan', 'counter for days'],
+      m_lang: 'en',
+    },
   },
   refs: {
     nelson_c: 2097,
@@ -47,15 +48,7 @@ const TEST_ENTRY = {
     sh_desc: '4c0.1',
     conning: 1,
   },
-  misc: {
-    sc: 4,
-    gr: 1,
-    freq: 1,
-    jlpt: 4,
-    kk: 10,
-    wk: 2,
-    jlptn: 5,
-  },
+  misc: { sc: 4, gr: 1, freq: 1, jlpt: 4, kk: 10, wk: 2, jlptn: 5 },
   m_lang: 'en',
   comp: [],
   cf: [],

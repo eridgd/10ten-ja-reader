@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'preact/hooks';
 import { useSelect, useValue } from 'react-cosmos/client';
 
-import { PopupKeys, StoredKeyboardKeys } from '../common/popup-keys';
+import type { StoredKeyboardKeys } from '../common/popup-keys';
+import { PopupKeys } from '../common/popup-keys';
 import { isMac } from '../utils/ua-utils';
 
 import { KeyboardSettingsForm } from './KeyboardSettingsForm';
@@ -16,9 +17,7 @@ export default function KeyboardSettingsFormFixture() {
 
   const [toggleCommandString, setToggleCommandString] = useValue(
     'toggle command',
-    {
-      defaultValue: 'Ctrl+Alt+R',
-    }
+    { defaultValue: 'Ctrl+Alt+R' }
   );
   const [toggleKeyDisabled] = useSelect('toggle key disabled', {
     options: ['none', 'chrome', 'edge', 'other'],
@@ -47,12 +46,14 @@ export default function KeyboardSettingsFormFixture() {
   // Hold-to-show keys
 
   const [holdToShowKeys, setHoldToShowKeys] = useState({
-    ctrl: true,
-    alt: false,
+    ctrl: false,
+    alt: true,
+    shift: true,
   });
   const [holdToShowImageKeys, setHoldToShowImageKeys] = useState({
     ctrl: true,
     alt: false,
+    shift: false,
   });
 
   // Popup keys
@@ -63,7 +64,10 @@ export default function KeyboardSettingsFormFixture() {
       return defaultKeys;
     }, {}) as StoredKeyboardKeys
   );
-  const updatePopupKey = (name: keyof StoredKeyboardKeys, keys: string[]) => {
+  const updatePopupKey = (
+    name: keyof StoredKeyboardKeys,
+    keys: Array<string>
+  ) => {
     setPopupKeys({ ...popupKeys, [name]: keys });
   };
 

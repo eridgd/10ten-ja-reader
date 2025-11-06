@@ -1,18 +1,19 @@
 /// <reference path="./mail-extensions.d.ts" />
 import Bugsnag from '@birchill/bugsnag-zero';
 import * as s from 'superstruct';
-import browser, { Runtime, Tabs, Windows } from 'webextension-polyfill';
+import type { Runtime, Tabs, Windows } from 'webextension-polyfill';
+import browser from 'webextension-polyfill';
 
-import { ContentConfigParams } from '../common/content-config-params';
+import type { ContentConfigParams } from '../common/content-config-params';
 import { requestIdleCallback } from '../utils/request-idle-callback';
 
-import {
+import type {
   BackgroundMessage,
   IndividualFrameMessage,
   TopFrameMessage,
 } from './background-message';
 import { BackgroundRequestSchema } from './background-request';
-import {
+import type {
   EnabledChangedCallback,
   EnabledState,
   TabManager,
@@ -113,10 +114,7 @@ export default class AllTabManager implements TabManager {
               return;
             }
 
-            this.dropFrame({
-              tabId: sender.tab.id,
-              frameId: sender.frameId,
-            });
+            this.dropFrame({ tabId: sender.tab.id, frameId: sender.frameId });
             break;
         }
 
@@ -352,10 +350,7 @@ export default class AllTabManager implements TabManager {
         tab.frames = [];
       }
     } else {
-      this.tabs[tabId] = {
-        src: frameId === 0 ? src : '',
-        frames: [],
-      };
+      this.tabs[tabId] = { src: frameId === 0 ? src : '', frames: [] };
     }
 
     const tab = this.tabs[tabId];
@@ -495,7 +490,9 @@ async function sendMessageToAllTabs(message: BackgroundMessage): Promise<void> {
   }
 
   for (const tab of allTabs) {
-    if (!tab.id) {
+    // In both Firefox and Chrome, somehow `tab` can sometimes be `null` it
+    // seems.
+    if (!tab?.id) {
       continue;
     }
 

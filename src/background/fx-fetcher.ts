@@ -21,7 +21,7 @@ class DownloadError extends Error {
   code: number;
   url: string;
 
-  constructor(url: string, code: number, ...params: any[]) {
+  constructor(url: string, code: number, ...params: Array<any>) {
     super(...params);
     Object.setPrototypeOf(this, DownloadError.prototype);
 
@@ -36,19 +36,9 @@ class DownloadError extends Error {
 }
 
 type FetchState =
-  | {
-      type: 'idle';
-      didFail?: boolean;
-    }
-  | {
-      type: 'fetching';
-      retryCount?: number;
-    }
-  | {
-      type: 'waiting to retry';
-      timeout: number;
-      retryCount: number;
-    };
+  | { type: 'idle'; didFail?: boolean }
+  | { type: 'fetching'; retryCount?: number }
+  | { type: 'waiting to retry'; timeout: number; retryCount: number };
 
 const ONE_MINUTE = 60 * 1000;
 const ONE_HOUR = 60 * ONE_MINUTE;

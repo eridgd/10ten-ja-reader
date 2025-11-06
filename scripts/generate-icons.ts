@@ -1,7 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as url from 'node:url';
-import { Browser, chromium } from 'playwright';
+import type { Browser } from 'playwright';
+import { chromium } from 'playwright';
 import { create, fragment } from 'xmlbuilder2';
 
 const DEST_FOLDER = url.fileURLToPath(new URL('../images', import.meta.url));
@@ -176,13 +177,7 @@ function generateSvg({
   }
 
   // Background
-  const backgroundRounding = {
-    16: 2.5,
-    32: 5,
-    48: 7.5,
-    96: 15,
-    128: 20,
-  };
+  const backgroundRounding = { 16: 2.5, 32: 5, 48: 7.5, 96: 15, 128: 20 };
   svg.ele('rect', {
     width: size,
     height: size,
@@ -390,15 +385,9 @@ function getErrorBadge(size: 16 | 32 | 48) {
   };
 
   return fragment()
-    .ele('path', {
-      d: trianglePath[size],
-      fill: '#f24b59',
-    })
+    .ele('path', { d: trianglePath[size], fill: '#f24b59' })
     .up()
-    .ele('path', {
-      d: exclamationMark[size],
-      fill: 'white',
-    })
+    .ele('path', { d: exclamationMark[size], fill: 'white' })
     .up();
 }
 

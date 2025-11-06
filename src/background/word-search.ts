@@ -1,17 +1,12 @@
-import { AbortError, PartOfSpeech } from '@birchill/jpdict-idb';
+import type { PartOfSpeech } from '@birchill/jpdict-idb';
+import { AbortError } from '@birchill/jpdict-idb';
 import { expandChoon, kyuujitaiToShinjitai } from '@birchill/normal-jp';
-import browser from 'webextension-polyfill';
 
 import { isOnlyDigits } from '../utils/char-range';
 import { toRomaji } from '../utils/romaji';
-import { stripFields } from '../utils/strip-fields';
 
-import {
-  CandidateWord,
-  WordType,
-  deinflect,
-  deinflectL10NKeys,
-} from './deinflect';
+import type { CandidateWord } from './deinflect';
+import { WordType, deinflect } from './deinflect';
 import type {
   CandidateWordResult,
   DictionaryWordResult,
@@ -64,9 +59,6 @@ export async function wordSearch({
       break;
     }
 
-    // If we include a de-inflected substring we show it in the reasons string.
-    const showInflections = !!result.data.length;
-
     const variations = [input];
 
     // Generate variations on this substring
@@ -81,15 +73,17 @@ export async function wordSearch({
       }
     }
 
+    const currentInputLength = inputLengths[input.length];
+
     for (const variant of variations) {
       const wordResults = await lookupCandidates({
         abortSignal,
         existingEntries: have,
         getWords,
         input: variant,
+        inputLength: currentInputLength,
         includeRomaji,
         maxResults,
-        showInflections,
       });
 
       if (!wordResults.length) {
@@ -102,7 +96,7 @@ export async function wordSearch({
 
       // And now that we know we will add at least one entry for this candidate
       // we can update our longest match length.
-      longestMatch = Math.max(longestMatch, inputLengths[input.length]);
+      longestMatch = Math.max(longestMatch, currentInputLength);
 
       // Add the results to the list
       //
@@ -147,16 +141,16 @@ async function lookupCandidates({
   getWords,
   includeRomaji,
   input,
+  inputLength,
   maxResults,
-  showInflections,
 }: {
   abortSignal?: AbortSignal;
   existingEntries: Set<number>;
   getWords: GetWordsFunction;
   includeRomaji: boolean;
   input: string;
+  inputLength: number;
   maxResults: number;
-  showInflections: boolean;
 }): Promise<Array<WordResult>> {
   const candidateResults: Array<CandidateWordResult> = [];
 
@@ -185,29 +179,7 @@ async function lookupCandidates({
 
   // Convert to a flattened WordResult
   return candidateResults.map((result) => {
-    const wordResult: WordResult = stripFields(result, ['reasonChains']);
-
-    // Generate the reason string
-    let reason: string | undefined;
-    const { reasonChains } = result;
-    if (reasonChains?.length) {
-      reason =
-        '< ' +
-        reasonChains
-          .map((reasonList) =>
-            reasonList
-              .map((reason) =>
-                browser.i18n.getMessage(deinflectL10NKeys[reason])
-              )
-              .join(' < ')
-          )
-          .join(browser.i18n.getMessage('deinflect_alternate'));
-      if (showInflections) {
-        reason += ` < ${input}`;
-      }
-
-      wordResult.reason = reason;
-    }
+    const wordResult: WordResult = { ...result, matchLen: inputLength };
 
     if (includeRomaji) {
       wordResult.romaji = wordResult.r.map((r) => toRomaji(r.ent));

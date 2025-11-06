@@ -1,11 +1,10 @@
 import { useLocale } from '../../../common/i18n';
 import { classes } from '../../../utils/classes';
 
-import { ShogiMeta, serializeShogi, serializeShogiDest } from '../../shogi';
+import type { ShogiMeta } from '../../shogi';
+import { serializeShogi, serializeShogiDest } from '../../shogi';
 
-type Props = {
-  meta: ShogiMeta;
-};
+type Props = { meta: ShogiMeta };
 
 export function ShogiInfo({ meta }: Props) {
   const { t, langTag } = useLocale();
@@ -66,15 +65,15 @@ export function ShogiInfo({ meta }: Props) {
     <div>
       <span
         class={classes(
-          'tp-text-2xs tp-rounded tp-mr-1 tp-px-1 whitespace-nowrap',
-          'tp-border-solid tp-border tp-border-[--tag-border]'
+          'tp:text-2xs tp:rounded-sm tp:mr-1 tp:px-1 tp:whitespace-nowrap',
+          'tp:border-solid tp:border tp:border-(--tag-border)'
         )}
         lang={langTag}
       >
         {t('shogi_label')}
       </span>
       <span lang="ja">{serializeShogi(meta)}</span>
-      <span class="tp-px-1.5">=</span>
+      <span class="tp:px-1.5">=</span>
       <span id="shogi-move">{move}</span>
     </div>
   );

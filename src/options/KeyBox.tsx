@@ -4,16 +4,13 @@ import { useId } from 'preact/hooks';
 
 import { classes } from '../utils/classes';
 
-type KeyboxProps = {
-  label: string;
-  isMac?: boolean;
-};
+type KeyboxProps = { label: string; isMac?: boolean };
 
 export function KeyBox(props: KeyboxProps) {
   return (
     <kbd
       class={classes(
-        'font-inherit my-0.5 inline-flex h-9 min-w-[2.5em] p-2 text-sm',
+        'my-0.5 inline-flex h-9 min-w-[2.5em] p-2 font-[inherit] text-sm',
         'flex-col items-center justify-center',
         'rounded-lg border border-solid border-zinc-400 bg-white dark:bg-zinc-800',
         'border-b-[3px] border-b-zinc-500'
@@ -86,7 +83,7 @@ export const KeyInput = forwardRef<HTMLInputElement, InputProps>(
     return (
       <input
         class={classes(
-          'transparent-caret font-inherit my-0.5 h-9 w-20 p-2 text-center text-sm',
+          'transparent-caret my-0.5 h-9 w-20 p-2 text-center! font-[inherit] text-sm',
           'rounded-lg border border-solid border-zinc-400 bg-white dark:bg-zinc-800',
           'border-b-[3px] border-b-zinc-500 disabled:opacity-50'
         )}

@@ -10,7 +10,7 @@ import type {
 import type { CopyType } from '../../common/copy-keys';
 import type { ReferenceAbbreviation } from '../../common/refs';
 import type { Box, Point } from '../../utils/geometry';
-import { stripFields } from '../../utils/strip-fields';
+import { omit } from '../../utils/omit';
 
 import type { SelectionMeta } from '../meta';
 import type { DisplayMode } from '../popup-state';
@@ -43,7 +43,7 @@ export type ShowPopupOptions = {
     includePartOfSpeech: boolean;
   };
   dictToShow: MajorDataSeries;
-  dictLang?: string;
+  dictLang: string;
   displayMode: DisplayMode;
   fixedPosition?: PopupPositionConstraints;
   fixMinHeight?: boolean;
@@ -152,24 +152,30 @@ export function showPopup(
       wrapper.transform.baseVal.initialize(transform);
     }
   } else {
-    popup.style.setProperty('--left', `${popupPos.x}px`);
-    popup.style.setProperty('--top', `${popupPos.y}px`);
+    popup.style.setProperty('--tenten-left', `${popupPos.x}px`);
+    popup.style.setProperty('--tenten-top', `${popupPos.y}px`);
 
     if (popupPos.constrainWidth) {
-      popup.style.setProperty('--max-width', `${popupPos.constrainWidth}px`);
+      popup.style.setProperty(
+        '--tenten-max-width',
+        `${popupPos.constrainWidth}px`
+      );
     } else {
-      popup.style.removeProperty('--max-width');
+      popup.style.removeProperty('--tenten-max-width');
     }
 
     if (popupPos.constrainHeight) {
-      popup.style.removeProperty('--min-height');
-      popup.style.setProperty('--max-height', `${popupPos.constrainHeight}px`);
+      popup.style.removeProperty('--tenten-min-height');
+      popup.style.setProperty(
+        '--tenten-max-height',
+        `${popupPos.constrainHeight}px`
+      );
     } else if (minHeight) {
-      popup.style.setProperty('--min-height', `${minHeight}px`);
-      popup.style.removeProperty('--max-height');
+      popup.style.setProperty('--tenten-min-height', `${minHeight}px`);
+      popup.style.removeProperty('--tenten-max-height');
     } else {
-      popup.style.removeProperty('--min-height');
-      popup.style.removeProperty('--max-height');
+      popup.style.removeProperty('--tenten-min-height');
+      popup.style.removeProperty('--tenten-max-height');
     }
   }
 
@@ -206,7 +212,7 @@ export function showPopup(
       width: popupPos.constrainWidth ?? popupSize.width,
       height: popupPos.constrainHeight ?? popupSize.height,
     },
-    pos: stripFields(popupPos, ['constrainWidth', 'constrainHeight']),
+    pos: omit(popupPos, 'constrainWidth', 'constrainHeight'),
   };
 }
 

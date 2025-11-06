@@ -1,7 +1,20 @@
 import { discriminator } from '@birchill/discriminator';
 import * as s from 'superstruct';
 
-import { PopupState, PopupStateSchema } from '../content/popup-state';
+import type { PopupState } from '../content/popup-state';
+import { PopupStateSchema } from '../content/popup-state';
+
+const SourceRubySchema = s.object({
+  base: s.array(s.string()),
+  transcription: s.array(s.string()),
+});
+
+const SourceContextSchema = s.object({
+  prelude: s.array(s.union([s.string(), SourceRubySchema])),
+  source: s.array(s.union([s.string(), SourceRubySchema])),
+  sourceOffset: s.number(),
+  inTranscription: s.optional(s.boolean()),
+});
 
 export const BackgroundMessageSchema = discriminator('type', {
   disable: s.type({ frame: s.literal('*') }),
@@ -35,10 +48,7 @@ export const BackgroundMessageSchema = discriminator('type', {
     dictMode: s.enums(['default', 'kanji']),
     // We don't validate the contents of meta (yet)
     meta: s.optional(s.type({})),
-    point: s.type({
-      x: s.number(),
-      y: s.number(),
-    }),
+    point: s.type({ x: s.number(), y: s.number() }),
     // Likewise, we don't validate target props (yet)
     targetProps: s.type({}),
     text: s.string(),
@@ -48,11 +58,10 @@ export const BackgroundMessageSchema = discriminator('type', {
       frameId: s.number(),
       initialSrc: s.optional(s.string()),
       currentSrc: s.string(),
-      dimensions: s.type({
-        width: s.number(),
-        height: s.number(),
-      }),
+      dimensions: s.type({ width: s.number(), height: s.number() }),
     }),
+    // The surrounding context of `text`
+    sourceContext: s.nullable(SourceContextSchema),
     frame: s.literal('top'),
   }),
   pinPopup: s.type({ frame: s.literal('top') }),

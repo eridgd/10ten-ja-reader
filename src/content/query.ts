@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill';
 
-import { BackgroundRequest } from '../background/background-request';
-import {
+import type { BackgroundRequest } from '../background/background-request';
+import type {
   KanjiSearchResult,
   NameResult,
   NameSearchResult,
@@ -11,7 +11,7 @@ import {
   WordSearchResult,
 } from '../background/search-result';
 import { hasKatakana } from '../utils/char-range';
-import { stripFields } from '../utils/strip-fields';
+import { omit } from '../utils/omit';
 
 export type QueryResult = {
   words: WordSearchResult | null;
@@ -24,10 +24,7 @@ export type QueryResult = {
   resultType: 'db-unavailable' | 'db-updating' | 'initial' | 'full';
 };
 
-export type NamePreview = {
-  names: Array<NameResult>;
-  more: boolean;
-};
+export type NamePreview = { names: Array<NameResult>; more: boolean };
 
 export interface QueryOptions {
   includeRomaji: boolean;
@@ -43,11 +40,7 @@ type QueryCacheEntry =
       wordsQuery: Promise<QueryResult | null>;
       fullQuery: Promise<QueryResult | null>;
     }
-  | {
-      key: string;
-      state: 'complete';
-      result: QueryResult;
-    };
+  | { key: string; state: 'complete'; result: QueryResult };
 
 let queryCache: Array<QueryCacheEntry> = [];
 
@@ -100,11 +93,7 @@ export async function query(
       } else if (result.resultType === 'full') {
         const cacheIndex = queryCache.findIndex((q) => q.key === key);
         if (cacheIndex !== -1) {
-          queryCache[cacheIndex] = {
-            key,
-            state: 'complete',
-            result,
-          };
+          queryCache[cacheIndex] = { key, state: 'complete', result };
         }
       } else {
         queryCache = queryCache.filter((q) => q.key !== key);
@@ -125,12 +114,7 @@ export async function query(
     return result === 'aborted' || !result?.words ? null : result;
   });
 
-  queryCache.push({
-    key,
-    state: 'searching',
-    wordsQuery,
-    fullQuery,
-  });
+  queryCache.push({ key, state: 'searching', wordsQuery, fullQuery });
 
   void fullQuery.then((result) => options.updateQueryResult(result));
 
@@ -180,7 +164,7 @@ async function queryWords(
     }
     queryResult = {
       words: {
-        ...stripFields(searchResult, ['dbStatus', 'textLen']),
+        ...omit(searchResult, 'dbStatus', 'textLen'),
         type: 'words',
         matchLen: searchResult.textLen,
       },
@@ -188,7 +172,7 @@ async function queryWords(
       resultType,
     };
   } else {
-    queryResult = { ...stripFields(searchResult, ['dbStatus']), resultType };
+    queryResult = { ...omit(searchResult, 'dbStatus'), resultType };
   }
 
   return queryResult;
@@ -248,6 +232,7 @@ async function queryOther(
     words: words?.words ?? null,
     names: searchResult.names,
     kanji: searchResult.kanji,
+    title: words?.title,
     resultType: 'full',
   });
 }

@@ -1,22 +1,21 @@
-import { Client as BugsnagClient } from '@birchill/bugsnag-zero';
-import {
-  BITS_PER_GLOSS_TYPE,
+import type { Client as BugsnagClient } from '@birchill/bugsnag-zero';
+import type {
   Gloss,
   GlossType,
-  GlossTypes,
   RawKanjiMeta,
   RawReadingMeta,
   RawWordSense,
   WordResult,
 } from '@birchill/jpdict-idb';
+import { BITS_PER_GLOSS_TYPE, GlossTypes } from '@birchill/jpdict-idb';
 import { kanaToHiragana } from '@birchill/normal-jp';
 import { LRUMap } from 'lru_map';
 import browser from 'webextension-polyfill';
 
-import { stripFields } from '../utils/strip-fields';
-import { Overwrite } from '../utils/type-helpers';
+import { omit } from '../utils/omit';
+import type { Overwrite } from '../utils/type-helpers';
 
-import { DictionaryWordResult, Sense } from './search-result';
+import type { DictionaryWordResult, Sense } from './search-result';
 import { sortWordResults } from './word-match-sorting';
 
 interface FlatFileDatabaseOptions {
@@ -403,7 +402,7 @@ function mergeMeta<MetaType extends RawKanjiMeta | RawReadingMeta, MergedType>(
 function expandSenses(senses: Array<RawWordSense>): Array<Sense> {
   return senses.map((sense) => ({
     g: expandGlosses(sense),
-    ...stripFields(sense, ['g', 'gt']),
+    ...omit(sense, 'g', 'gt'),
     match: true,
   }));
 }

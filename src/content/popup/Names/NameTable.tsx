@@ -1,13 +1,13 @@
 import { useRef } from 'preact/hooks';
 
 import type { NameResult } from '../../../background/search-result';
-import { ContentConfigParams } from '../../../common/content-config-params';
+import type { ContentConfigParams } from '../../../common/content-config-params';
 import { classes } from '../../../utils/classes';
 
-import { SelectionMeta } from '../../meta';
+import type { SelectionMeta } from '../../meta';
 
 import { MetadataContainer } from '../Metadata/MetadataContainer';
-import { CopyState } from '../copy-state';
+import type { CopyState } from '../copy-state';
 import { getSelectedIndex } from '../selected-index';
 import { containerHasSelectedText } from '../selection';
 import type { StartCopyCallback } from '../show-popup';
@@ -35,7 +35,7 @@ export const NameTable = (props: NameTableProps) => {
 
   return (
     <div
-      class={classes('tp-my-2', entries.length > 4 ? 'tp-columns-2' : '')}
+      class={classes('tp:my-2', entries.length > 4 ? 'tp:columns-2' : '')}
       ref={namesTable}
     >
       <div style={{ 'column-span': 'all' }}>
@@ -80,7 +80,7 @@ export const NameTable = (props: NameTableProps) => {
           />
         );
       })}
-      {more && <span class="tp-px-4">…</span>}
+      {more && <span class="tp:px-4">…</span>}
     </div>
   );
 };

@@ -1,16 +1,14 @@
 import { useCallback, useState } from 'preact/hooks';
 
 import type { Config } from '../common/config';
-import { HighlightStyle } from '../common/content-config-params';
+import type { HighlightStyle } from '../common/content-config-params';
 import { useLocale } from '../common/i18n';
 
 import { GeneralSettingsForm } from './GeneralSettingsForm';
 import { SectionHeading } from './SectionHeading';
 import { useConfigValue } from './use-config-value';
 
-type Props = {
-  config: Config;
-};
+type Props = { config: Config };
 
 export function GeneralSettings(props: Props) {
   const { t } = useLocale();

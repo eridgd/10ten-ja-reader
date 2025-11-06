@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -18,7 +18,7 @@ jobs:
           version: latest
 
       - name: Setup node
-        uses: actions/setup-node@v4.1.0
+        uses: actions/setup-node@v6.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -36,13 +36,13 @@ jobs:
           target: Firefox
 
       - name: Download Firefox binary
-        uses: robinraju/release-downloader@v1.11
+        uses: robinraju/release-downloader@v1.12
         with:
           releaseId: ${{ github.event.release.id }}
           fileName: ${{ steps.parse_firefox_release.outputs.addon_asset_name }}
 
       - name: Download source archive
-        uses: robinraju/release-downloader@v1.11
+        uses: robinraju/release-downloader@v1.12
         with:
           releaseId: ${{ github.event.release.id }}
           fileName: ${{ steps.parse_firefox_release.outputs.src_asset_name }}
@@ -66,7 +66,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -74,7 +74,7 @@ jobs:
           version: latest
 
       - name: Setup node
-        uses: actions/setup-node@v4.1.0
+        uses: actions/setup-node@v6.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -92,7 +92,7 @@ jobs:
           target: Edge
 
       - name: Download Edge binary
-        uses: robinraju/release-downloader@v1.11
+        uses: robinraju/release-downloader@v1.12
         if: ${{ !steps.parse_edge_release.outputs.skip }}
         with:
           releaseId: ${{ github.event.release.id }}
@@ -104,10 +104,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          access_token_url: ${{ secrets.EDGE_ACCESS_TOKEN_URL }}
+          api_key: ${{ secrets.EDGE_API_KEY }}
           addon_file: ${{ steps.parse_edge_release.outputs.addon_asset_name }}
           client_id: ${{ secrets.EDGE_CLIENT_ID }}
-          client_secret: ${{ secrets.EDGE_CLIENT_SECRET }}
           product_id: ${{ secrets.EDGE_PRODUCT_ID }}
 
   publish-chrome:
@@ -116,7 +115,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -124,7 +123,7 @@ jobs:
           version: latest
 
       - name: Setup node
-        uses: actions/setup-node@v4.1.0
+        uses: actions/setup-node@v6.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -142,7 +141,7 @@ jobs:
           target: Chrome
 
       - name: Download Chrome binary
-        uses: robinraju/release-downloader@v1.11
+        uses: robinraju/release-downloader@v1.12
         if: ${{ !steps.parse_chrome_release.outputs.skip }}
         with:
           releaseId: ${{ github.event.release.id }}

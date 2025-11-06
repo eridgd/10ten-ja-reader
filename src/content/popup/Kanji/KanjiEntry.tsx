@@ -26,7 +26,8 @@ export function KanjiEntry(props: Props) {
   return (
     <div
       class={classes(
-        'tp-flex tp-flex-col tp-gap-3.5 tp-px-5 tp-py-3',
+        'tp:group',
+        'tp:flex tp:flex-col tp:gap-3.5 tp:px-5 tp:py-3',
         // Set the -selected / -flash class since we use that we scroll into
         // view any selected item during / after copying.
         //
@@ -36,9 +37,11 @@ export function KanjiEntry(props: Props) {
         props.selectState === 'selected' && '-selected',
         props.selectState === 'flash' && '-flash'
       )}
+      data-selected={props.selectState === 'selected' || undefined}
+      data-flash={props.selectState === 'flash' || undefined}
       ref={kanjiTable}
     >
-      <div class="tp-flex tp-items-start tp-gap-[20px]">
+      <div class="tp:flex tp:items-start tp:gap-[20px]">
         <KanjiCharacter
           c={props.entry.c}
           onClick={(trigger) => {
@@ -48,10 +51,9 @@ export function KanjiEntry(props: Props) {
 
             props.onStartCopy?.(props.index, trigger);
           }}
-          selectState={props.selectState}
           st={props.entry.st}
         />
-        <div class="tp-mt-1.5 tp-grow">
+        <div class="tp:mt-1.5 tp:grow">
           <KanjiInfo {...props.entry} showComponents={props.showComponents} />
         </div>
       </div>
@@ -70,7 +72,6 @@ export function KanjiEntry(props: Props) {
 type KanjiCharacterProps = {
   c: string;
   onClick?: (trigger: 'touch' | 'mouse') => void;
-  selectState: 'unselected' | 'selected' | 'flash';
   st?: string;
 };
 
@@ -80,17 +81,9 @@ function KanjiCharacter(props: KanjiCharacterProps) {
   // There's no way to trigger the animation when we're not in "mouse
   // interactive" mode so just show the static character in that case.
   return props.st && interactive ? (
-    <KanjiStrokeAnimation
-      onClick={props.onClick}
-      selectState={props.selectState}
-      st={props.st}
-    />
+    <KanjiStrokeAnimation onClick={props.onClick} st={props.st} />
   ) : (
-    <StaticKanjiCharacter
-      c={props.c}
-      onClick={props.onClick}
-      selectState={props.selectState}
-    />
+    <StaticKanjiCharacter c={props.c} onClick={props.onClick} />
   );
 }
 
@@ -101,26 +94,26 @@ function StaticKanjiCharacter(props: KanjiCharacterProps) {
   return (
     <div
       class={classes(
-        'tp-text-[--primary-highlight] tp-text-big-kanji tp-text-center tp-pt-2 tp-rounded-md',
+        'tp:text-(--primary-highlight) tp:text-big-kanji tp:text-center tp:pt-2 tp:rounded-md',
         '[text-shadow:var(--shadow-color)_1px_1px_4px]',
         ...(interactive
           ? [
-              'hh:hover:tp-text-[--selected-highlight]',
-              'hh:hover:tp-bg-[--hover-bg]',
-              'hh:hover:tp-cursor-pointer',
+              'tp:hover:text-(--selected-highlight)',
+              'tp:hover:bg-(--hover-bg)',
+              'tp:hover:cursor-pointer',
               // Fade _out_ the color change
-              'hh:tp-transition-colors hh:interactive:tp-duration-100',
-              'hh:tp-ease-out',
-              'hh:hover:tp-transition-none',
+              'tp:transition-colors tp:interactive:duration-100',
+              'tp:ease-out',
+              'tp:hover:transition-none',
             ]
           : []),
         // Ensure any selection colors are applied before fading in the
         // overlay
-        props.selectState === 'selected' &&
-          'no-overlay:tp-text-[--selected-highlight] no-overlay:tp-bg-[--selected-bg]',
+        'tp:no-overlay:group-data-selected:text-(--selected-highlight)',
+        'tp:no-overlay:group-data-selected:bg-(--selected-bg)',
         // Run the flash animation, but not until the overlay has
         // disappeared.
-        props.selectState === 'flash' && 'no-overlay:tp-animate-flash'
+        'tp:no-overlay:group-data-flash:animate-flash'
       )}
       lang="ja"
       onPointerUp={(evt) => {

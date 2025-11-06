@@ -1,6 +1,6 @@
 import { useMemo } from 'preact/hooks';
 
-import { DbLanguageId } from '../common/db-languages';
+import type { DbLanguageId } from '../common/db-languages';
 import { useLocale } from '../common/i18n';
 import {
   type ReferenceAbbreviation,
@@ -23,10 +23,7 @@ export function KanjiReferenceSettingsForm(props: Props) {
 
   const references = useMemo(() => {
     return [
-      {
-        ref: 'kanjiComponents',
-        full: t('options_kanji_components'),
-      },
+      { ref: 'kanjiComponents', full: t('options_kanji_components') },
       ...getReferenceLabelsForLang(props.dictLang, t),
     ];
   }, [props.dictLang, lang]);

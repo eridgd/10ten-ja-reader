@@ -139,20 +139,14 @@ const { mockStorage } = vi.hoisted(() => {
   return { mockStorage: new MockStorage() };
 });
 
-vi.mock('webextension-polyfill', () => ({
-  default: {
-    storage: mockStorage,
-  },
-}));
+vi.mock('webextension-polyfill', () => ({ default: { storage: mockStorage } }));
 
-import { ChangeCallback, Config } from './config';
-import { DbLanguageId } from './db-languages';
+import type { ChangeCallback } from './config';
+import { Config } from './config';
+import type { DbLanguageId } from './db-languages';
 
 type StorageName = 'sync' | 'local';
-type StorageChange = {
-  oldValue?: any;
-  newValue?: any;
-};
+type StorageChange = { oldValue?: any; newValue?: any };
 type ChangeDict = { [field: string]: StorageChange };
 type Listener = (changes: ChangeDict, areaName: StorageName) => void;
 
@@ -227,6 +221,7 @@ describe('Config', () => {
     expect(config.showKanjiComponents).toEqual(true);
     expect(config.showPriority).toEqual(true);
     expect(config.showPuck).toEqual('auto');
+    expect(config.handedness).toEqual('unset');
     expect(config.showRomaji).toEqual(false);
     expect(config.tabDisplay).toEqual('top');
     expect(config.toolbarIcon).toEqual('default');
@@ -269,13 +264,7 @@ describe('Config', () => {
 
   it('upgrades reference settings', async () => {
     await mockStorage.sync.set({
-      kanjiReferences: {
-        E: true,
-        U: true,
-        P: false,
-        L: false,
-        Y: true,
-      },
+      kanjiReferences: { E: true, U: true, P: false, L: false, Y: true },
     });
 
     const config = new Config();
@@ -402,5 +391,12 @@ describe('Config', () => {
     window.dispatchEvent(languageChangeEvent);
     await noChangePromise;
     expect(config.dictLang).toEqual('pt');
+  });
+
+  it('removes Shift from kanjiLookup when used as hold-to-show key', () => {
+    const config = new Config();
+    config.holdToShowKeys = 'Alt+Shift';
+    config.updateKeys({ kanjiLookup: ['Shift'] });
+    expect(config.keys.kanjiLookup).not.toContain('Shift');
   });
 });

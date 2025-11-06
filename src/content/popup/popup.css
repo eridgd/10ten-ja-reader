@@ -1,11 +1,93 @@
-@config "./tailwind.config.js";
+/*
+ * Disable preflight styles:
+ * https://tailwindcss.com/docs/preflight#disabling-preflight
+ */
+@layer theme, base, components, utilities;
 
-@import '../../../css/themes.css';
+@import 'tailwindcss/theme.css' layer(theme) prefix(tp);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tp) source('./');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import '../../../css/themes.css' layer(base);
+@import '../../../css/font-settings.css' layer(components);
 
+@custom-variant no-overlay ([data-type="window"]:not([data-has-overlay]) &);
+@custom-variant has-overlay ([data-type="window"][data-has-overlay] &);
+
+@theme {
+  --animate-flash: flash 0.5s;
+
+  @keyframes flash {
+    from {
+      background: white;
+      color: white;
+    }
+  }
+}
+
+@theme {
+  --color-black: #1d1a19;
+  --color-overlay-gray: oklch(0.5697 0.0174 37.83);
+
+  --shadow-overlay-button:
+    0.2px 0.6px 0.5px hsl(0deg 0% 0% / 12%),
+    0.4px 1.2px 1.1px -1.5px hsl(0deg 0% 0% / 9%),
+    1.4px 3.7px 3.3px -3px hsl(0deg 0% 0% / 6%),
+    3.8px 10.3px 9.1px -4.4px hsl(0deg 0% 0% / 4%);
+}
+
+/*
+ * Theme variables referencing other variables have to be inlined, otherwise,
+ * updates to the referenced variables will not propagate as expected.
+ * See https://tailwindcss.com/docs/theme#referencing-other-variables
+ */
+@theme inline {
+  /**
+   * Compare to
+   * https://github.com/tailwindlabs/tailwindcss/blob/48957c541122f77ff22a09f81545b14ae7d7ae80/packages/tailwindcss/theme.css#L299-L324
+   */
+  --text-2xs: calc(10 / 14 * var(--base-font-size));
+  --text-2xs--line-height: calc(0.9 * var(--base-font-size));
+  --text-xs: calc(11 / 14 * var(--base-font-size));
+  --text-xs--line-height: var(--base-font-size);
+  --text-sm: calc(12 / 14 * var(--base-font-size));
+  --text-sm--line-height: calc(1.25 * var(--base-font-size));
+  --text-smish: calc(13 / 14 * var(--base-font-size));
+  --text-smish--line-height: calc(1.4 * var(--base-font-size));
+  --text-base: var(--base-font-size);
+  --text-base--line-height: calc(1.5 * var(--base-font-size));
+  --text-lg: calc(16 / 14 * var(--base-font-size));
+  --text-lg--line-height: calc(1.75 * var(--base-font-size));
+  --text-xl: calc(18 / 14 * var(--base-font-size));
+  --text-xl--line-height: calc(1.75 * var(--base-font-size));
+  --text-1.5xl: calc(20 / 14 * var(--base-font-size));
+  --text-1.5xl--line-height: calc(1.85 * var(--base-font-size));
+  --text-2xl: calc(22 / 14 * var(--base-font-size));
+  --text-2xl--line-height: calc(2 * var(--base-font-size));
+  --text-big-kanji: calc(60 / 14 * var(--base-font-size));
+  --text-big-kanji--line-height: 1;
+
+  --spacing: calc(0.25 * var(--base-font-size));
+
+  --radius-xs: calc(0.125 * var(--base-font-size));
+  --radius-sm: calc(0.25 * var(--base-font-size));
+  --radius-md: calc(0.375 * var(--base-font-size));
+  --radius-lg: calc(0.5 * var(--base-font-size));
+  --radius-xl: calc(0.75 * var(--base-font-size));
+  --radius-2xl: calc(1.25 * var(--base-font-size));
+  --radius-3xl: calc(1.5 * var(--base-font-size));
+}
+
+@utility stacked {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1 / 2 / 2;
+  }
+}
+
+/*
+ * TODO Convert the following to more Tailwind-like utilities.
+ */
 @layer components {
   :host {
     /*
@@ -38,19 +120,10 @@
     z-index: 2147483647 !important;
   }
 
-  :root,
-  :host {
-    --normal-font-size: 14px;
-    --large-font-size: 17px;
-    --xl-font-size: 19px;
-
-    --base-font-size: var(--normal-font-size);
-  }
-
   .container {
     position: absolute;
-    left: var(--left, auto);
-    top: var(--top, auto);
+    left: var(--tenten-left, auto);
+    top: var(--tenten-top, auto);
 
     /*
     * Use the empirical maximum z-index since some sites (e.g. TimeTree) use this
@@ -104,30 +177,30 @@
   * on the popup.
   */
   .container.interactive .window {
-    max-height: var(--max-height, none);
+    max-height: var(--tenten-max-height, none);
   }
 
   .container:not(.interactive) {
-    max-height: var(--max-height, none);
+    max-height: var(--tenten-max-height, none);
     -webkit-mask-image: linear-gradient(
       to bottom,
-      black calc(var(--max-height) - 5px),
+      black calc(var(--tenten-max-height) - 5px),
       transparent
     );
     mask-image: linear-gradient(
       to bottom,
-      black calc(var(--max-height) - 5px),
+      black calc(var(--tenten-max-height) - 5px),
       transparent
     );
   }
 
   .container .window {
-    min-height: var(--min-height, none);
+    min-height: var(--tenten-min-height, none);
   }
 
   .window {
-    max-width: var(--max-width, 600px);
-    max-width: var(--max-width, min(600px, calc(100vw - 30px)));
+    max-width: var(--tenten-max-width, 600px);
+    max-width: var(--tenten-max-width, min(600px, calc(100vw - 30px)));
 
     contain: content;
     border-radius: 5px;
@@ -140,15 +213,6 @@
     color: var(--text-color);
     background: var(--bg-color);
     border: 1px solid var(--border-color);
-
-    font-family: Meiryo, sans-serif;
-  }
-
-  .window.bundled-fonts {
-    font-family: '10ten Inter', '10ten Noto Sans JP', sans-serif;
-    font-feature-settings: 'calt', 'case', 'cv01', 'cv03', 'cv04', 'cv11',
-      'ss03';
-    font-weight: 380;
   }
 
   /* When the tabs are shown on top, make the window have a consistent width
@@ -219,14 +283,6 @@
 
   .window {
     font-size: var(--base-font-size);
-  }
-
-  .window.font-large {
-    --base-font-size: var(--large-font-size);
-  }
-
-  .window.font-xl {
-    --base-font-size: var(--xl-font-size);
   }
 
   /* Tab bar */
@@ -613,418 +669,6 @@
     border: 1px solid var(--expand-button-color) !important;
   }
 
-  /* Word display */
-
-  .wordlist {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-  }
-
-  .wordlist .entry {
-    scroll-snap-align: start;
-    /* This matches the margin at the top of the word list */
-    scroll-margin-top: 8px;
-    scroll-margin-bottom: var(--expand-button-allowance);
-  }
-
-  .entry,
-  .more {
-    padding: 4px 14px;
-  }
-
-  .window.font-large .wordlist {
-    gap: 12px;
-  }
-
-  .window.font-xl .wordlist {
-    gap: 16px;
-  }
-
-  .entry,
-  .entry * {
-    line-height: 1.3;
-  }
-
-  .w-kanji {
-    font-size: calc(20 / 14 * var(--base-font-size));
-    margin-right: 0.7em;
-    color: var(--primary-highlight);
-  }
-
-  .w-kanji .dimmed,
-  .w-kanji .separator,
-  .w-kana .dimmed,
-  .w-kana .separator {
-    opacity: 0.6;
-  }
-
-  .w-kanji .wk-level,
-  .w-kanji .bp-tag,
-  .w-kana .bp-tag {
-    display: inline-block;
-    font-size: calc(10 / 14 * var(--base-font-size));
-    border-radius: 3px;
-    margin-left: 0.5em;
-    margin-right: 0.5em;
-    padding: 3px 3px 2px;
-    line-height: 1;
-    white-space: nowrap;
-    transform: translateY(-3px);
-  }
-
-  .w-kanji .wk-level {
-    color: var(--primary-highlight);
-    border: 1px solid var(--primary-highlight);
-    text-underline-offset: 2px;
-  }
-
-  /*
-   * Make sure to only show the dotted link underline when the popup is
-   * interactive.
-   */
-  .w-kanji .wk-level,
-  .w-kanji .wk-level::before {
-    text-decoration: none;
-  }
-
-  .container.interactive .w-kanji .wk-level,
-  .container.interactive .w-kanji .wk-level::before {
-    text-decoration: underline dotted;
-  }
-
-  .w-kanji .wk-level::before {
-    display: inline-block;
-    content: 'WK';
-    margin-right: 0.2em;
-  }
-
-  .window .entry.-selected .w-kanji .wk-level {
-    border-color: var(--selected-highlight);
-  }
-
-  @media (hover) {
-    .container.interactive .w-kanji .wk-level:hover {
-      background: color(from var(--selected-highlight) srgb r g b / 0.1);
-    }
-
-    .container.interactive .entry:hover .w-kanji .wk-level {
-      color: var(--selected-highlight);
-      border-color: var(--selected-highlight);
-    }
-  }
-
-  .w-kanji .bp-tag.-vocab,
-  .w-kana .bp-tag.-vocab {
-    border: 1px solid var(--bunpro-vocab);
-    color: var(--bunpro-vocab);
-  }
-  .w-kanji .bp-tag.-grammar,
-  .w-kana .bp-tag.-grammar {
-    border: 1px solid var(--bunpro-grammar);
-    color: var(--bunpro-grammar);
-  }
-
-  .w-kanji .bp-tag .bp-src,
-  .w-kana .bp-tag .bp-src {
-    margin-left: 0.3em;
-    color: var(--bunpro-src);
-  }
-
-  .w-kana {
-    font-size: calc(18 / 14 * var(--base-font-size));
-    margin-right: 0.3em;
-  }
-
-  .w-kana > .w-heiban {
-    border-top: 1.5px dotted currentcolor !important;
-  }
-
-  .w-kana > .w-binary {
-    /* Add a gap below so the border doesn't overlap with the definition */
-    display: inline-block;
-    margin-bottom: 0.2em;
-  }
-
-  .w-kana > .w-binary > * {
-    /* Drop gaps between borders */
-    margin: 0;
-    /* Make room for the borders
-    * (and to compensate for the extra margin we added to the wrapper above) */
-    font-size: 90%;
-    border: 0 dotted currentcolor;
-    --border-width: 1.5px;
-  }
-
-  .w-kana > .w-binary.-hi-contrast > * {
-    border-color: var(--hi-contrast-pitch-accent);
-    --border-width: 2px;
-  }
-
-  .w-kana > .w-binary > .h-l {
-    border-top-width: var(--border-width);
-    border-right-width: var(--border-width);
-  }
-
-  .w-kana > .w-binary > .l-h {
-    border-bottom-width: var(--border-width);
-    border-right-width: var(--border-width);
-  }
-
-  .w-kana > .w-binary > .h {
-    border-top-width: var(--border-width);
-  }
-
-  .w-kana > .w-binary > .l {
-    border-bottom-width: var(--border-width);
-  }
-
-  .w-romaji {
-    font-size: var(--base-font-size);
-    margin-right: 0.3em;
-  }
-
-  .w-kana + .w-romaji {
-    margin-left: 0.3em;
-  }
-
-  .w-kana,
-  .w-romaji {
-    color: var(--reading-highlight);
-  }
-
-  .w-kanji .w-head-info,
-  .w-kana .w-head-info {
-    margin-left: 0.3em;
-    font-size: calc(10 / 14 * var(--base-font-size));
-  }
-
-  .w-kanji .svgicon,
-  .w-kana .svgicon {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    margin-left: 3px;
-    margin-right: 3px;
-    fill: currentcolor;
-  }
-
-  .w-kanji .svgicon path,
-  .w-kana .svgicon path {
-    fill: currentcolor;
-  }
-
-  .w-conj {
-    font-size: calc(12 / 14 * var(--base-font-size));
-    color: var(--conj-color);
-  }
-
-  .w-def {
-    font-size: var(--base-font-size);
-  }
-
-  .w-def .w-inf {
-    font-size: calc(12 / 14 * var(--base-font-size));
-  }
-
-  /* Give group headings a bit more space. They typically consist of a series of
-  * which can easily look cramped when there are tags on the line above or below
-  * it. */
-  .w-def .w-group-head {
-    margin-top: 2px;
-    margin-bottom: 3px;
-  }
-
-  /* Especially when we have group headings amongst other definitions, we want a
-  * bit more vertical space before they start. */
-  .w-def ol + .w-group-head {
-    margin-top: 6px;
-  }
-
-  .w-def ul {
-    padding-left: 1.5em;
-    margin: 0;
-  }
-
-  /* Add a little breathing space between native language definitions and
-  * subsequent English definitions. */
-  .w-def ul + .w-group-head,
-  .w-def ul + ol {
-    margin-top: 6px;
-  }
-
-  .w-def ol {
-    padding-left: 1.5em;
-    list-style-type: decimal !important;
-    margin: 0;
-  }
-
-  .w-def ol li {
-    list-style-type: decimal !important;
-    font-size: var(--base-font-size);
-    line-height: 1.5;
-  }
-
-  .w-def ul li {
-    list-style-type: circle !important;
-    font-size: var(--base-font-size);
-    line-height: 1.5;
-  }
-
-  .w-def.foreign,
-  .w-def .foreign {
-    opacity: 0.85;
-  }
-
-  .w-def .w-type {
-    font-size: calc(12 / 14 * var(--base-font-size));
-  }
-
-  .w-def .tag {
-    font-size: calc(10 / 14 * var(--base-font-size));
-    border: 1px solid var(--tag-border) !important;
-    border-radius: 3px;
-    margin-left: 0.5em;
-    padding: 0px 3px;
-    white-space: nowrap;
-  }
-
-  .w-def .tag-fem {
-    background: var(--tag-pink-bg);
-  }
-
-  .w-def .tag-masc {
-    background: var(--tag-blue-bg);
-  }
-
-  .w-def .tag-place {
-    background: var(--tag-green-bg);
-  }
-
-  .w-def .w-field {
-    background: var(--tag-green-bg);
-  }
-
-  .w-def .w-misc {
-    background: var(--tag-blue-bg);
-  }
-
-  .w-def .w-dial {
-    background: var(--tag-pink-bg);
-  }
-
-  .w-def .w-pos,
-  .w-def .w-field,
-  .w-def .w-misc,
-  .w-def .w-dial {
-    margin-left: 0em;
-    margin-right: 0.5em;
-  }
-
-  .w-def .w-lsrc,
-  .w-def .w-lsrc * {
-    font-size: calc(12 / 14 * var(--base-font-size));
-  }
-
-  .window:not(.-has-overlay) .entry.-selected {
-    color: var(--selected-highlight);
-    background: var(--selected-bg);
-    border-radius: 2px;
-  }
-
-  @media (hover) {
-    .container.interactive .entry:not(:hover) {
-      transition: background-color 0.08s ease-out;
-    }
-    .container.interactive .entry:hover {
-      color: var(--selected-highlight);
-      background: var(--hover-bg);
-      border-radius: 2px;
-      cursor: pointer;
-    }
-    .container.interactive .entry.-selected:hover {
-      background: var(--selected-bg);
-    }
-  }
-
-  .window .entry.-selected .w-def .tag {
-    color: var(--selected-tag-color);
-    border-color: var(--selected-tag-border) !important;
-  }
-
-  @media (hover) {
-    .container.interactive .entry:hover .w-def .tag {
-      color: var(--selected-tag-color);
-      border-color: var(--selected-tag-border) !important;
-    }
-  }
-
-  .window .entry.-selected .w-kanji {
-    color: var(--selected-highlight);
-  }
-
-  @media (hover) {
-    .container.interactive .entry:hover .w-kanji {
-      color: var(--selected-highlight);
-    }
-  }
-
-  .window .entry.-selected .w-kana,
-  .window .entry.-selected .w-romaji {
-    color: var(--selected-reading-highlight);
-  }
-
-  @media (hover) {
-    .container.interactive .entry:hover .w-kana,
-    .container.interactive .entry:hover .w-romaji {
-      color: var(--selected-reading-highlight);
-    }
-  }
-
-  .window .entry.-selected .w-def,
-  .window .entry.-selected .w-def * {
-    color: var(--selected-def-color);
-  }
-
-  @media (hover) {
-    .container.interactive .entry:hover .w-def,
-    .container.interactive .entry:hover .w-def * {
-      color: var(--selected-def-color);
-    }
-  }
-
-  .window .entry.-selected .w-conj {
-    color: var(--selected-conj-color);
-  }
-
-  @media (hover) {
-    .container.interactive .entry:hover .w-conj {
-      color: var(--selected-conj-color);
-    }
-  }
-
-  .window .entry.-flash {
-    animation: tenten-ja-flash 0.5s;
-  }
-
-  @keyframes tenten-ja-flash {
-    from {
-      background: white;
-      color: white;
-    }
-  }
-
-  .title {
-    background: var(--title-bg);
-    color: var(--title-fg);
-    font-size: calc(10 / 14 * var(--base-font-size));
-    padding: 10px 14px 6px;
-    border-radius: 5px 5px 0 0;
-    margin-bottom: 3px;
-  }
-
   /* Kanji display */
 
   .kanjilist {
@@ -1140,187 +784,8 @@
   }
 
   /*
-  * Bonus name
-  */
-
-  .wordlist .bonus-name {
-    margin-top: 8px;
-    margin-bottom: 3px;
-    background: var(--meta-bg);
-    scroll-snap-align: start;
-    scroll-margin-top: 8px;
-  }
-
-  .wordlist .bonus-name .more {
-    padding: 0px 14px;
-  }
-
-  /*
-  * Copy overlay for when the popup is interactive
-  */
-  .copy-overlay {
-    box-sizing: border-box;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    /* It's important to align to the top so that if the popup is very long we
-    * don't end up putting the copy buttons off screen somewhere. */
-    justify-content: start;
-    align-items: center;
-    padding-top: 24px;
-    padding-bottom: 24px;
-    isolation: isolate;
-    overflow: hidden;
-
-    /* We fade the background so we always want a dark foreground color here,
-    * regardless of the theme. */
-    color: #1d1a19;
-  }
-
-  /* Blurring for the entry area when the copy overlay is showing */
-  .window.-has-overlay .content .grid-stack > :first-child {
-    pointer-events: none;
-    filter: blur(20px);
-    transition: filter 0.3s ease-in-out;
-  }
-
-  .window.-has-overlay .content .grid-stack > .copy-overlay {
-    background: hsla(0, 0%, 97%, 0.6);
-    transition: background-color 0.3s ease-in-out;
-  }
-
-  /* If the overlay is showing, don't constrain the window height since it might
-  * mean that the buttons on the overlay get cut off. */
-  .window.-has-overlay {
-    max-height: none;
-  }
-
-  /* Let the size of the overlay determine the overall size of the popup contents.
-  *
-  * This prevents the window from suddenly getting very large when we drop the
-  * max-height definition above.
-  *
-  * Ideally we'd only do this if we were actually going to constrain the height
-  * anyway, but that's hard to detect so we just do this unconditionally and so
-  * far it seems to work ok. */
-  .window.-has-overlay .content .grid-stack > .entry-data {
-    position: absolute;
-    width: 100%;
-  }
-
-  .copy-overlay .copy-heading {
-    opacity: 0.8;
-  }
-
-  .copy-overlay .copy-options {
-    max-width: 90%;
-    list-style: none;
-    margin: 0 8px;
-    padding: 0;
-  }
-
-  .copy-overlay .copy-options li {
-    margin-top: 12px;
-    margin-bottom: 12px;
-  }
-
-  /* Reset some button styles */
-  .copy-overlay button {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-  }
-
-  .copy-overlay .copy-options li button {
-    font-size: calc(16 / 14 * var(--base-font-size));
-    font-weight: 600;
-    width: 100%;
-    min-height: 60px;
-    background: white;
-    padding: 8px 32px;
-    border-radius: 16px;
-    --shadow-color: 0deg 0% 0%;
-    box-shadow:
-      0.2px 0.6px 0.5px hsl(var(--shadow-color) / 0.12),
-      0.4px 1.2px 1.1px -1.5px hsl(var(--shadow-color) / 0.09),
-      1.4px 3.7px 3.3px -3px hsl(var(--shadow-color) / 0.06),
-      3.8px 10.3px 9.1px -4.4px hsl(var(--shadow-color) / 0.04);
-    border: 0.1px solid hsla(0deg, 0%, 0%, 0.1);
-  }
-
-  .copy-overlay .copy-options .copy-preview {
-    margin-top: calc(4 / 14 * var(--base-font-size));
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-    color: #817470;
-    font-size: calc(12 / 14 * var(--base-font-size));
-    font-weight: 400;
-    max-width: 200px;
-    overflow: hidden;
-    -webkit-mask-image: linear-gradient(to right, black 180px, transparent);
-    mask-image: linear-gradient(to right, black 180px, transparent);
-  }
-
-  .copy-overlay .copy-options .copy-preview .icon {
-    flex-shrink: 0;
-    width: 1.2em;
-    height: 1.2em;
-    margin-right: 6px;
-    opacity: 0.6;
-  }
-
-  .copy-overlay .copy-options .copy-preview span {
-    min-width: 0;
-  }
-
-  .copy-overlay .copy-options button.-icon-label,
-  .copy-overlay .cancel-button {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    line-height: 1.5;
-  }
-
-  .copy-overlay .copy-options button.-icon-label .icon,
-  .copy-overlay .cancel-button .icon {
-    width: 1.2em;
-    height: 1.2em;
-    margin-right: 6px;
-    margin-top: -0.2em;
-    opacity: 0.6;
-  }
-
-  .copy-overlay .cancel-button {
-    padding: 12px 36px;
-    color: rgba(0, 0, 0, 0.4);
-  }
-
-  /*
-  * Utility: grid stack
-  */
-
-  .grid-stack,
-  .-stack {
-    display: grid;
-    grid-template-rows: [stack-start] auto [stack-end];
-  }
-
-  .grid-stack > *,
-  .-stack > * {
-    grid-column: 1 / -1;
-    grid-row: stack-start / stack-end;
-  }
-
-  /*
-  * Arrow
-  */
+   * Arrow
+   */
   .arrow {
     position: absolute;
     overflow: hidden;

@@ -1,8 +1,8 @@
-import { HighlightStyle } from '../common/content-config-params';
+import type { HighlightStyle } from '../common/content-config-params';
 import { SVG_NS, empty } from '../utils/dom-utils';
-import { Point, Rect } from '../utils/geometry';
+import type { Point, Rect } from '../utils/geometry';
 
-import { CursorPosition } from './get-cursor-position';
+import type { CursorPosition } from './get-cursor-position';
 
 export function injectGdocsStyles() {
   removeGdocsStyles();
@@ -35,32 +35,31 @@ export function removeGdocsStyles() {
 
 export function getTextFromAnnotatedCanvas({
   maxLength,
+  maxPreludeLength,
   point,
 }: {
   maxLength?: number;
+  maxPreludeLength?: number;
   point: Point;
-}): {
-  position: CursorPosition | null;
-  text: string;
-} {
+}): { position: CursorPosition | null; text: string; prelude: string } {
   const elem = document.elementFromPoint(point.x, point.y);
   if (!elem || !isGdocsSpan(elem)) {
-    return { position: null, text: '' };
+    return { position: null, text: '', prelude: '' };
   }
 
   let text = elem.getAttribute('aria-label');
   if (!text) {
-    return { position: null, text: '' };
+    return { position: null, text: '', prelude: '' };
   }
 
   const font = elem.getAttribute('data-font-css');
   if (!font) {
-    return { position: null, text: '' };
+    return { position: null, text: '', prelude: '' };
   }
 
   const ctx = document.createElement('canvas').getContext('2d');
   if (!ctx) {
-    return { position: null, text: '' };
+    return { position: null, text: '', prelude: '' };
   }
 
   const docScale = getDocScale(elem);
@@ -101,13 +100,23 @@ export function getTextFromAnnotatedCanvas({
     currentSpan = nextSpan;
   }
 
-  return {
-    position: {
-      offset: start,
-      offsetNode: elem,
-    },
-    text,
-  };
+  // If maxPreludeLength is set, we may need to accumulate some prelude context.
+  currentSpan = elem;
+  let prelude = '';
+  while (maxPreludeLength && start + prelude.length < maxPreludeLength) {
+    const prevSpan = currentSpan.previousSibling;
+    if (!isGdocsSpan(prevSpan)) {
+      break;
+    }
+
+    const remainingLength = maxPreludeLength - start;
+    const toPrepend =
+      prevSpan.getAttribute('aria-label')?.slice(-remainingLength) || '';
+    prelude = toPrepend + prelude;
+    currentSpan = prevSpan;
+  }
+
+  return { position: { offset: start, offsetNode: elem }, text, prelude };
 }
 
 function getDocScale(gdocsSpanElem: SVGElement) {

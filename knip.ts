@@ -2,8 +2,6 @@ import type { KnipConfig } from 'knip';
 
 const config: KnipConfig = {
   entry: [
-    // Utility script used by update docs pages.
-    'docs/update/update.js',
     // A utility we used to generate all the icon variations once that might yet
     // be useful again some day.
     'scripts/generate-icons.ts',
@@ -24,23 +22,17 @@ const config: KnipConfig = {
     // Ignore the locale files compiled by the i18n polyfill
     'tests/_locales_*.js',
   ],
+  ignoreFiles: [
+    'css/selection.css',
+    'xcode13/Shared (App)/Resources/Style.css',
+  ],
   ignoreDependencies: [
     // Used by our browser test and automatically detected by playwright-test.
     'mocha',
     '@types/mocha',
   ],
-  ignoreExportsUsedInFile: {
-    interface: true,
-    type: true,
-  },
-  playwright: {
-    // Knip doesn't recognize the globs in package.json scripts
-    entry: 'tests/**/*.test.{js,ts}',
-    config: 'playwright-test.config.js',
-  },
-  tailwind: {
-    config: ['**/tailwind.config.js'],
-  },
+  ignoreExportsUsedInFile: { interface: true, type: true },
+  playwright: 'playwright-test.config.js',
 };
 
 export default config;

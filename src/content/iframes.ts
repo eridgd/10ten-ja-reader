@@ -1,16 +1,13 @@
 import browser from 'webextension-polyfill';
 
-import { Point } from '../utils/geometry';
-import { WithRequired } from '../utils/type-helpers';
+import type { Point } from '../utils/geometry';
+import type { WithRequired } from '../utils/type-helpers';
 
 export type IframeSearchParams = {
   frameId?: number;
   initialSrc?: string;
   currentSrc?: string;
-  dimensions?: {
-    width: number;
-    height: number;
-  };
+  dimensions?: { width: number; height: number };
 };
 
 // As with IframeSearchParams but will a few members marked not optional
@@ -215,11 +212,7 @@ export function getIframeOrigin(
     }
   }
 
-  cachedOrigin = {
-    iframe: iframeElement,
-    origin: { x, y },
-    resizeObserver,
-  };
+  cachedOrigin = { iframe: iframeElement, origin: { x, y }, resizeObserver };
 
   return cachedOrigin.origin;
 }
@@ -234,9 +227,6 @@ export function getWindowDimensions(): { width: number; height: number } {
       height: document.body?.clientHeight ?? window.innerHeight,
     };
   } else {
-    return {
-      width: window.innerWidth,
-      height: window.innerHeight,
-    };
+    return { width: window.innerWidth, height: window.innerHeight };
   }
 }
